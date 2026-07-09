@@ -1,53 +1,110 @@
-An advanced, end-to-end platform designed to conduct realistic, high-pressure technical interviews. Instead of interacting with a rigid text-based chatbot, this platform simulates a live interview environment using voice recognition, dynamic follow-up generation, and comprehensive behavioral and technical analysis.
+# AI Interview Simulator
 
-Whether you are preparing for a FAANG engineering loop or a startup technical screen, this tool tracks your progress, identifies your weaknesses, and helps you refine your delivery.
+An advanced AI-powered technical interview platform that conducts realistic voice-based interviews, evaluates technical and communication performance, generates adaptive follow-up questions, and tracks candidate improvement over time.
 
-🌟 Key Features
-Resume-Driven Context: Upload your PDF/Docx resume. The system analyzes your experience to generate targeted, highly relevant interview questions.
+Unlike a basic interview chatbot, this project combines speech intelligence, resume-aware question generation, conversation state management, answer evaluation, and progress analytics.
 
-Company-Specific Scenarios: Tailor the interview simulation to specific companies, adapting the difficulty and focus areas to match known interview styles.
+## Key Features
 
-Live Voice Interaction: Hands-free interviewing using real-time speech-to-text, simulating the actual flow of a conversation.
+- **Resume-Aware Interviews:** Upload a resume and generate targeted technical, project-based, and behavioral questions.
+- **Voice-Based Interviewing:** Record spoken answers and convert them into transcripts using speech-to-text.
+- **Speech Intelligence:** Detect filler words, hesitation, speaking speed, pauses, repeated words, and sentence restarts.
+- **Dynamic Follow-Ups:** Generate follow-up questions based on answer quality, weak concepts, and confidence scores.
+- **Answer Evaluation:** Measure keyword coverage, semantic similarity, completeness, technical accuracy, and communication clarity.
+- **Progress Analytics:** Track improvement over multiple interview sessions using dashboards and visual reports.
+- **Interview Memory:** Personalize future interviews based on past weaknesses and performance trends.
 
-Behavioral & Speech Analytics: Advanced audio processing detects hesitation, pacing issues, and the overuse of filler words (e.g., "um," "like," "you know").
+## System Architecture
 
-Dynamic Follow-Ups: The AI dynamically generates follow-up questions based on the technical depth and quality of your previous answers, actively probing your knowledge boundaries.
+```text
+React Frontend
+    |
+WebRTC / Audio Recording
+    |
+FastAPI Backend
+    |
++----------------------+----------------------+----------------------+
+| Speech Engine        | Interview Engine     | Analytics Engine     |
+| - Whisper STT        | - State Machine      | - Progress Metrics   |
+| - Filler Detection   | - Follow-up Planner  | - Skill Trends       |
+| - Pause Analysis     | - Adaptive Difficulty| - Reports            |
++----------------------+----------------------+----------------------+
+    |
+PostgreSQL + Redis + Object Storage
+```
 
-Detailed Performance Reports: Receive a comprehensive breakdown post-interview, scoring technical accuracy, communication clarity, and confidence.
+## Tech Stack
 
-Progress Tracking: Historical dashboards allow you to monitor your improvement over time across multiple interview sessions.
-     
-This project is built using a modern, scalable architecture:
-
-  Frontend
-
-React: For a highly responsive, dynamic user interface.
-
-Backend & Database
-
-FastAPI (Python): High-performance backend API handling async requests and audio stream processing.
-
-PostgreSQL: Relational database for securely storing user profiles, resume text, interview logs, and historical performance metrics.
-
-AI & Machine Learning
-
-OpenAI Whisper: State-of-the-art speech-to-text for accurate, real-time transcription and audio analysis.
-
-LLM APIs (e.g., OpenAI / Anthropic / Gemini): Powers the core logic for question generation, context evaluation, and grading rubrics.
-
+### Frontend
+React
+TypeScript
+Tailwind CSS
+shadcn/ui
+Recharts
+Backend
+FastAPI
+Python
+PostgreSQL
+Redis
+Celery
+AI / ML
+Whisper for speech-to-text
+sentence-transformers for semantic similarity
+spaCy for NLP and entity extraction
+scikit-learn for analytics
+LLM APIs for interviewer behavior and evaluation
 Infrastructure
-
-Docker: Containerized frontend, backend, and database services for isolated, seamless deployment.
-
-⚙️ How It Works
-Initialize: The user creates a profile and uploads their latest resume.
-
-Configure: The user selects a target role (e.g., Backend Engineer) and a target company.
-
-The Interview: The FastAPI backend prompts the LLM to generate the first question. The React frontend reads it aloud.
-
-The Response: The user answers via microphone. Whisper transcribes the audio and notes pauses/hesitations.
-
-The Evaluation: The LLM evaluates the transcribed answer, generates a relevant follow-up, and the cycle continues.
-
-The Debrief: Once the interview concludes, all data is saved to PostgreSQL, and the user receives a detailed dashboard report on their performance.
+Docker
+GitHub Actions
+S3-compatible storage
+Cloud deployment target: AWS / GCP / Render
+Core Modules
+Speech Intelligence Module
+Processes interview audio and extracts measurable communication signals:
+speaking speed
+pause count
+average pause duration
+long pauses
+filler words
+repeated words
+sentence restarts
+Interview Engine
+Controls the interview flow using a conversation state machine:
+introduction
+resume questions
+project deep dives
+data structures and algorithms
+behavioral questions
+HR round
+conclusion
+Answer Understanding Engine
+Evaluates answers using a structured pipeline:
+transcript segmentation
+embedding generation
+topic extraction
+expected concept coverage
+semantic similarity
+LLM-based explanation
+Analytics Engine
+Tracks performance across interview sessions:
+technical accuracy
+answer relevance
+communication clarity
+confidence
+filler rate
+improvement over time
+Roadmap
+See [ROADMAP.md](docs/ROADMAP.md).
+Setup
+See [SETUP.md](docs/SETUP.md).
+Project Status
+This project is currently in active development.
+Current focus:
+project foundation
+backend API setup
+resume upload
+speech analytics
+interview state machine
+Author
+Akshit Bedi
+Computer Science Student, Batch 2024-2028
