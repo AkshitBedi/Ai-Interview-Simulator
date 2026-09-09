@@ -3,10 +3,22 @@ try:
     # Works when started from the repository root: uvicorn backend.main:app
     from .database import create_tables, get_db
     from .evaluator import evaluate_interview_answer
+    from .interview_engine import (
+        start_session,
+        get_session_details,
+        record_answer_and_advance,
+        get_session_summary
+    )
 except ImportError:
     # Works when started inside backend: uvicorn main:app
     from database import create_tables, get_db
     from evaluator import evaluate_interview_answer
+    from interview_engine import (
+        start_session,
+        get_session_details,
+        record_answer_and_advance,
+        get_session_summary
+    )
 from typing import Literal
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, Query
@@ -520,3 +532,120 @@ def get_answer_feedback(answer_id: int):
         "evaluator": getattr(evaluation, "evaluator", "ai-evaluator"),
         "cached": False
     }
+
+
+class SessionCreate(BaseModel):
+    category: str | None = None
+    difficulty: Literal["beginner", "medium", "hard"] | None = None
+    max_turns: int = Field(default=5, ge=1, le=20)
+
+
+class SessionAnswerSubmission(BaseModel):
+    answer: str = Field(min_length=10)
+
+
+@app.post("/sessions", status_code=201)
+def create_session(session_data: SessionCreate):
+    connection = get_db()
+    try:
+        result = start_session(
+            connection=connection,
+            category=session_data.category,
+            difficulty=session_data.difficulty,
+            max_turns=session_data.max_turns
+        )
+    except ValueError as e:
+        connection.close()
+        raise HTTPException(status_code=400, detail=str(e))
+
+    connection.close()
+    return result
+
+
+@app.get("/sessions/{session_id}")
+def get_session(session_id: int):
+    connection = get_db()
+    data = get_session_details(connection, session_id)
+    connection.close()
+
+    if data is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    return data
+
+
+@app.post("/sessions/{session_id}/answer")
+def submit_session_answer(session_id: int, submission: SessionAnswerSubmission):
+    connection = get_db()
+
+    session_row = connection.execute(
+        "SELECT * FROM interview_sessions WHERE id = ?",
+        (session_id,)
+    ).fetchone()
+
+    if session_row is None:
+        connection.close()
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if session_row["status"] != "active":
+        connection.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Interview session is already completed or inactive."
+        )
+
+    pending_turn = connection.execute(
+        """
+        SELECT st.*, q.category AS q_cat, q.difficulty AS q_diff
+        FROM session_turns st
+        LEFT JOIN questions q ON q.id = st.question_id
+        WHERE st.session_id = ? AND st.status = 'pending'
+        ORDER BY st.turn_number ASC LIMIT 1
+        """,
+        (session_id,)
+    ).fetchone()
+
+    if pending_turn is None:
+        connection.close()
+        raise HTTPException(
+            status_code=400,
+            detail="No active question pending an answer in this session."
+        )
+
+    # Determine topic & difficulty for evaluation context
+    cat = pending_turn["q_cat"] or session_row["category"] or "Technical"
+    diff = pending_turn["q_diff"] or session_row["difficulty"] or "medium"
+
+    # Context-aware evaluation: Evaluates both question and answer!
+    evaluation = evaluate_interview_answer(
+        question=pending_turn["question_text"],
+        category=cat,
+        difficulty=diff,
+        answer=submission.answer
+    )
+
+    try:
+        result = record_answer_and_advance(
+            connection=connection,
+            session_id=session_id,
+            answer_text=submission.answer,
+            evaluation=evaluation
+        )
+    except Exception as e:
+        connection.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    connection.close()
+    return result
+
+
+@app.get("/sessions/{session_id}/summary")
+def get_session_summary_endpoint(session_id: int):
+    connection = get_db()
+    summary = get_session_summary(connection, session_id)
+    connection.close()
+
+    if summary is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    return summary

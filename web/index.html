@@ -16,7 +16,10 @@
       --question-bg: #eef4ff;
       --feedback-bg: #ecfdf5;
       --history-bg: #fff7ed;
+      --summary-bg: #f8fafc;
       --error: #b91c1c;
+      --amber: #d97706;
+      --amber-bg: #fef3c7;
     }
 
     * {
@@ -32,7 +35,7 @@
     }
 
     main {
-      max-width: 760px;
+      max-width: 820px;
       margin: auto;
       padding: 32px;
       background: white;
@@ -75,12 +78,37 @@
       font-size: 28px;
     }
 
+    /* Mode Navigation Tabs */
+    .mode-tabs {
+      display: flex;
+      gap: 10px;
+      margin: 24px 0 16px 0;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .tab-btn {
+      padding: 10px 18px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f1f5f9;
+      color: var(--muted);
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+
     .filters {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
       align-items: end;
-      margin: 24px 0;
+      margin: 20px 0;
     }
 
     .field {
@@ -99,13 +127,18 @@
       border-radius: 7px;
       padding: 10px;
       font: inherit;
+      background: white;
+    }
+
+    select {
+      min-width: 150px;
     }
 
     textarea {
       width: 100%;
-      min-height: 150px;
+      min-height: 120px;
       resize: vertical;
-      margin: 12px 0;
+      line-height: 1.5;
     }
 
     button {
@@ -132,6 +165,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
+      margin-top: 14px;
     }
 
     .card {
@@ -140,12 +174,57 @@
       border-radius: 10px;
     }
 
-    #question-box {
+    #question-box,
+    .session-question-card {
       background: var(--question-bg);
+      border: 1px solid #c7d2fe;
     }
 
-    #feedback-box {
+    #feedback-box,
+    .session-feedback-card {
       background: var(--feedback-bg);
+      border: 1px solid #bbf7d0;
+    }
+
+    #previous-answers-box {
+      background: var(--history-bg);
+      border: 1px solid #fed7aa;
+    }
+
+    .summary-card {
+      background: var(--summary-bg);
+      border: 2px solid #3b82f6;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-bank {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+
+    .badge-followup {
+      background: var(--amber-bg);
+      color: var(--amber);
+      border: 1px solid #fcd34d;
+    }
+
+    .session-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .feedback-score-badge {
@@ -183,10 +262,6 @@
       padding-top: 8px;
     }
 
-    #previous-answers-box {
-      background: var(--history-bg);
-    }
-
     .answer-item {
       padding: 12px;
       margin: 10px 0;
@@ -196,10 +271,55 @@
       line-height: 1.5;
     }
 
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .summary-stat {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .summary-stat span {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .summary-stat strong {
+      font-size: 1.4rem;
+      color: var(--blue);
+    }
+
+    .turn-history-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 0.9rem;
+    }
+
+    .turn-history-table th,
+    .turn-history-table td {
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      text-align: left;
+    }
+
+    .turn-history-table th {
+      background: #f1f5f9;
+    }
+
     #status {
       min-height: 24px;
       margin-top: 10px;
       color: var(--muted);
+      font-weight: 500;
     }
 
     #status.error {
@@ -207,19 +327,17 @@
     }
 
     .hidden {
-      display: none;
+      display: none !important;
     }
 
     @media (max-width: 560px) {
       main {
-        padding: 22px;
+        padding: 20px 16px;
       }
 
-      .stats {
-        flex-direction: column;
-      }
-
+      .stats,
       .filters {
+        flex-direction: column;
         align-items: stretch;
       }
     }
@@ -232,83 +350,243 @@
 
     <section class="stats" aria-label="Interview statistics">
       <div class="stat-card">
-        <p>Total questions</p>
+        <p>Total bank questions</p>
         <strong id="question-count">0</strong>
       </div>
 
       <div class="stat-card">
-        <p>Total answers</p>
+        <p>Total submitted answers</p>
         <strong id="answer-count">0</strong>
       </div>
     </section>
 
-    <section class="filters" aria-label="Question filters">
-      <div class="field">
-        <label for="category-filter">Category</label>
-        <select id="category-filter">
-          <option value="">Any category</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="difficulty-filter">Difficulty</label>
-        <select id="difficulty-filter">
-          <option value="">Any difficulty</option>
-        </select>
-      </div>
-
-      <button type="button" id="new-question-button">
-        Get Random Question
+    <!-- Mode Selector Tabs -->
+    <nav class="mode-tabs" aria-label="Mode selector">
+      <button type="button" class="tab-btn active" id="tab-session-btn">
+        Full Mock Interview Session (Phase 3)
       </button>
-    </section>
+      <button type="button" class="tab-btn" id="tab-practice-btn">
+        Single Question Practice
+      </button>
+    </nav>
 
     <p id="status" role="status"></p>
 
-    <section id="question-box" class="card hidden">
-      <p>
-        <strong id="category"></strong>
-        &middot;
-        <strong id="difficulty"></strong>
-      </p>
+    <!-- SECTION A: MOCK INTERVIEW SESSION -->
+    <div id="session-container">
+      <!-- Session Setup -->
+      <section id="session-setup" class="filters">
+        <div class="field">
+          <label for="session-category">Domain / Topic</label>
+          <select id="session-category">
+            <option value="">Any Domain</option>
+          </select>
+        </div>
 
-      <h2 id="question"></h2>
+        <div class="field">
+          <label for="session-difficulty">Difficulty</label>
+          <select id="session-difficulty">
+            <option value="">Any Difficulty</option>
+            <option value="beginner">Beginner</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
 
-      <label for="answer">Your answer</label>
-      <textarea
-        id="answer"
-        minlength="10"
-        placeholder="Write your interview answer here..."
-      ></textarea>
+        <div class="field">
+          <label for="session-turns-select">Questions Target</label>
+          <select id="session-turns-select">
+            <option value="3">3 Questions</option>
+            <option value="5" selected>5 Questions</option>
+          </select>
+        </div>
 
-      <div class="button-row">
-        <button type="button" id="submit-answer-button" disabled>
-          Submit Answer
+        <button type="button" id="start-session-button">
+          Start Interview Session
         </button>
+      </section>
 
-        <button type="button" id="view-answers-button" disabled>
-          View Previous Answers
+      <!-- Active Session Card -->
+      <section id="session-active" class="card session-question-card hidden">
+        <div class="session-meta-row">
+          <div>
+            <span id="session-progress-text"><strong>Session #1</strong> &middot; Turn 1 of 5</span>
+          </div>
+          <div>
+            <span id="session-question-type-badge" class="badge badge-bank">Question Bank</span>
+          </div>
+        </div>
+
+        <h2 id="session-question-title"></h2>
+
+        <label for="session-answer-input">Your Answer</label>
+        <textarea
+          id="session-answer-input"
+          minlength="10"
+          placeholder="Type your technical response here (minimum 10 characters)..."
+        ></textarea>
+
+        <div class="button-row">
+          <button type="button" id="session-submit-button">
+            Submit Answer & Advance
+          </button>
+        </div>
+      </section>
+
+      <!-- Turn Evaluation Display -->
+      <section id="session-evaluation-card" class="card session-feedback-card hidden">
+        <h2>Turn Evaluation & Feedback</h2>
+        <div id="session-eval-score"></div>
+        <p id="session-eval-feedback"></p>
+        <div id="session-eval-details"></div>
+      </section>
+
+      <!-- Session Completed Summary Report -->
+      <section id="session-summary-card" class="card summary-card hidden">
+        <h2>Interview Complete! Performance Summary</h2>
+        <p id="session-summary-rec" style="font-weight: bold; font-size: 1.05rem;"></p>
+
+        <div class="summary-grid">
+          <div class="summary-stat">
+            <span>Average Score</span>
+            <strong id="summary-avg-score">0 / 10</strong>
+          </div>
+          <div class="summary-stat">
+            <span>Total Questions</span>
+            <strong id="summary-total-turns">0</strong>
+          </div>
+          <div class="summary-stat">
+            <span>Adaptive Follow-Ups</span>
+            <strong id="summary-followups-count">0</strong>
+          </div>
+        </div>
+
+        <h3>Turn-by-Turn Breakdown</h3>
+        <table class="turn-history-table">
+          <thead>
+            <tr>
+              <th>Turn</th>
+              <th>Type</th>
+              <th>Question</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody id="summary-table-body"></tbody>
+        </table>
+
+        <div id="summary-strengths-box" class="feedback-section">
+          <h3>Key Strengths</h3>
+          <ul id="summary-strengths-list" class="feedback-list"></ul>
+        </div>
+
+        <div id="summary-improvements-box" class="feedback-section">
+          <h3>Areas for Candidate Growth</h3>
+          <ul id="summary-improvements-list" class="feedback-list"></ul>
+        </div>
+
+        <div class="button-row">
+          <button type="button" id="start-new-session-button">
+            Start Another Interview
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- SECTION B: SINGLE QUESTION PRACTICE (Existing Phase 1 & 2) -->
+    <div id="practice-container" class="hidden">
+      <section class="filters" aria-label="Question filters">
+        <div class="field">
+          <label for="category-filter">Category</label>
+          <select id="category-filter">
+            <option value="">Any category</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="difficulty-filter">Difficulty</label>
+          <select id="difficulty-filter">
+            <option value="">Any difficulty</option>
+          </select>
+        </div>
+
+        <button type="button" id="new-question-button">
+          Get Random Question
         </button>
-      </div>
-    </section>
+      </section>
 
-    <section id="feedback-box" class="card hidden">
-      <h2>AI Evaluation & Feedback</h2>
-      <div id="feedback-score-container"></div>
-      <p id="feedback"></p>
-      <div id="feedback-details"></div>
-    </section>
+      <section id="question-box" class="card hidden">
+        <p>
+          <strong id="category"></strong>
+          &middot;
+          <strong id="difficulty"></strong>
+        </p>
 
-    <section id="previous-answers-box" class="card hidden">
-      <h2>Previous Answers</h2>
-      <div id="previous-answers"></div>
-    </section>
+        <h2 id="question"></h2>
+
+        <label for="answer">Your answer</label>
+        <textarea
+          id="answer"
+          minlength="10"
+          placeholder="Write your interview answer here..."
+        ></textarea>
+
+        <div class="button-row">
+          <button type="button" id="submit-answer-button" disabled>
+            Submit Answer
+          </button>
+
+          <button type="button" id="view-answers-button" disabled>
+            View Previous Answers
+          </button>
+        </div>
+      </section>
+
+      <section id="feedback-box" class="card hidden">
+        <h2>AI Evaluation & Feedback</h2>
+        <div id="feedback-score-container"></div>
+        <p id="feedback"></p>
+        <div id="feedback-details"></div>
+      </section>
+
+      <section id="previous-answers-box" class="card hidden">
+        <h2>Previous Answers</h2>
+        <div id="previous-answers"></div>
+      </section>
+    </div>
   </main>
 
   <script>
     const API_URL = "http://127.0.0.1:8000";
 
-    let currentQuestionId = null;
+    // Navigation Tabs
+    const tabSessionBtn = document.getElementById("tab-session-btn");
+    const tabPracticeBtn = document.getElementById("tab-practice-btn");
+    const sessionContainer = document.getElementById("session-container");
+    const practiceContainer = document.getElementById("practice-container");
+    const statusMessage = document.getElementById("status");
 
+    // Session State
+    let activeSessionId = null;
+    let activeTurnNumber = 1;
+    let activeMaxTurns = 5;
+
+    // Session Elements
+    const sessionCategorySelect = document.getElementById("session-category");
+    const sessionDifficultySelect = document.getElementById("session-difficulty");
+    const sessionTurnsSelect = document.getElementById("session-turns-select");
+    const startSessionButton = document.getElementById("start-session-button");
+    const sessionActiveCard = document.getElementById("session-active");
+    const sessionProgressText = document.getElementById("session-progress-text");
+    const sessionQuestionTypeBadge = document.getElementById("session-question-type-badge");
+    const sessionQuestionTitle = document.getElementById("session-question-title");
+    const sessionAnswerInput = document.getElementById("session-answer-input");
+    const sessionSubmitButton = document.getElementById("session-submit-button");
+    const sessionEvalCard = document.getElementById("session-evaluation-card");
+    const sessionSummaryCard = document.getElementById("session-summary-card");
+    const startNewSessionButton = document.getElementById("start-new-session-button");
+
+    // Practice Mode Elements
+    let currentQuestionId = null;
     const categoryFilter = document.getElementById("category-filter");
     const difficultyFilter = document.getElementById("difficulty-filter");
     const newQuestionButton = document.getElementById("new-question-button");
@@ -317,17 +595,24 @@
     const questionBox = document.getElementById("question-box");
     const feedbackBox = document.getElementById("feedback-box");
     const previousAnswersBox = document.getElementById("previous-answers-box");
-    const statusMessage = document.getElementById("status");
+
+    // Event Listeners
+    tabSessionBtn.addEventListener("click", () => switchTab("session"));
+    tabPracticeBtn.addEventListener("click", () => switchTab("practice"));
+
+    startSessionButton.addEventListener("click", startSession);
+    sessionSubmitButton.addEventListener("click", submitSessionAnswer);
+    startNewSessionButton.addEventListener("click", resetSessionView);
 
     newQuestionButton.addEventListener("click", getRandomQuestion);
-    submitAnswerButton.addEventListener("click", submitAnswer);
+    submitAnswerButton.addEventListener("click", submitPracticeAnswer);
     viewAnswersButton.addEventListener("click", getPreviousAnswers);
 
     initializePage();
 
     async function initializePage() {
       try {
-        setStatus("Loading interview data...");
+        setStatus("Loading simulator data...");
         await Promise.all([getStats(), loadFilters()]);
         setStatus("");
       } catch (error) {
@@ -335,32 +620,38 @@
       }
     }
 
+    function switchTab(mode) {
+      if (mode === "session") {
+        tabSessionBtn.classList.add("active");
+        tabPracticeBtn.classList.remove("active");
+        sessionContainer.classList.remove("hidden");
+        practiceContainer.classList.add("hidden");
+      } else {
+        tabPracticeBtn.classList.add("active");
+        tabSessionBtn.classList.remove("active");
+        practiceContainer.classList.remove("hidden");
+        sessionContainer.classList.add("hidden");
+      }
+    }
+
     async function fetchApi(path, options = {}) {
       const response = await fetch(`${API_URL}${path}`, options);
-
       let data = {};
-
       try {
         data = await response.json();
       } catch {
         throw new Error("The server returned an unreadable response.");
       }
-
       if (!response.ok) {
         throw new Error(data.detail || "Something went wrong.");
       }
-
       return data;
     }
 
     async function getStats() {
       const data = await fetchApi("/stats");
-
-      document.getElementById("question-count").textContent =
-        data.total_questions;
-
-      document.getElementById("answer-count").textContent =
-        data.total_answers;
+      document.getElementById("question-count").textContent = data.total_questions;
+      document.getElementById("answer-count").textContent = data.total_answers;
     }
 
     async function loadFilters() {
@@ -368,20 +659,20 @@
       const questions = data.questions || [];
 
       const categories = [...new Set(
-        questions.map((question) => question.category)
-      )].sort();
-
-      const difficulties = [...new Set(
-        questions.map((question) => question.difficulty)
+        questions.map((q) => q.category)
       )].sort();
 
       addOptions(categoryFilter, categories, "Any category");
+      addOptions(sessionCategorySelect, categories, "Any Domain");
+
+      const difficulties = [...new Set(
+        questions.map((q) => q.difficulty)
+      )].sort();
       addOptions(difficultyFilter, difficulties, "Any difficulty");
     }
 
     function addOptions(selectElement, values, defaultLabel) {
       selectElement.innerHTML = "";
-
       const defaultOption = document.createElement("option");
       defaultOption.value = "";
       defaultOption.textContent = defaultLabel;
@@ -395,6 +686,200 @@
       });
     }
 
+    // ==========================================
+    // PHASE 3: INTERVIEW SESSION FUNCTIONS
+    // ==========================================
+
+    async function startSession() {
+      startSessionButton.disabled = true;
+      setStatus("Initializing interview session...");
+      sessionSummaryCard.classList.add("hidden");
+      sessionEvalCard.classList.add("hidden");
+
+      try {
+        const payload = {
+          category: sessionCategorySelect.value || null,
+          difficulty: sessionDifficultySelect.value || null,
+          max_turns: parseInt(sessionTurnsSelect.value, 10) || 5
+        };
+
+        const session = await fetchApi("/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        activeSessionId = session.session_id;
+        activeTurnNumber = session.current_turn;
+        activeMaxTurns = session.max_turns;
+
+        displaySessionQuestion(session.question);
+        document.getElementById("session-setup").classList.add("hidden");
+        sessionActiveCard.classList.remove("hidden");
+        setStatus("");
+      } catch (err) {
+        setStatus(err.message, true);
+      } finally {
+        startSessionButton.disabled = false;
+      }
+    }
+
+    function displaySessionQuestion(questionData) {
+      sessionProgressText.innerHTML = `<strong>Session #${activeSessionId}</strong> &middot; Turn ${activeTurnNumber} of ${activeMaxTurns}`;
+      
+      if (questionData.is_follow_up) {
+        sessionQuestionTypeBadge.className = "badge badge-followup";
+        sessionQuestionTypeBadge.textContent = "Adaptive Follow-Up";
+      } else {
+        sessionQuestionTypeBadge.className = "badge badge-bank";
+        sessionQuestionTypeBadge.textContent = "Question Bank";
+      }
+
+      sessionQuestionTitle.textContent = questionData.question;
+      sessionAnswerInput.value = "";
+      sessionAnswerInput.focus();
+    }
+
+    async function submitSessionAnswer() {
+      const answer = sessionAnswerInput.value.trim();
+
+      if (!activeSessionId) {
+        setStatus("No active session.", true);
+        return;
+      }
+
+      if (answer.length < 10) {
+        setStatus("Your answer must contain at least 10 characters.", true);
+        return;
+      }
+
+      sessionSubmitButton.disabled = true;
+      setStatus("Evaluating your answer and planning the next step...");
+
+      try {
+        const response = await fetchApi(`/sessions/${activeSessionId}/answer`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ answer })
+        });
+
+        // 1. Render turn evaluation
+        renderSessionEvaluation(response.evaluated_turn);
+
+        // 2. Handle next step decision
+        if (response.decision === "completed") {
+          sessionActiveCard.classList.add("hidden");
+          setStatus("Interview session completed!");
+          await loadSessionSummary(activeSessionId);
+        } else {
+          // Advance to next question
+          activeTurnNumber = response.current_turn;
+          displaySessionQuestion(response.next_question);
+          setStatus(
+            response.decision === "follow_up"
+              ? "The interviewer followed up on a missing concept from your answer."
+              : "Advancing to the next interview question."
+          );
+        }
+
+        await getStats();
+      } catch (err) {
+        setStatus(err.message, true);
+      } finally {
+        sessionSubmitButton.disabled = false;
+      }
+    }
+
+    function renderSessionEvaluation(evaluation) {
+      sessionEvalCard.classList.remove("hidden");
+
+      const scoreEl = document.getElementById("session-eval-score");
+      scoreEl.innerHTML = `<span class="feedback-score-badge">Score: ${evaluation.score} / 10</span>`;
+
+      document.getElementById("session-eval-feedback").textContent = evaluation.feedback;
+
+      const details = document.getElementById("session-eval-details");
+      details.innerHTML = "";
+
+      if (evaluation.technical_accuracy) {
+        const accDiv = document.createElement("div");
+        accDiv.className = "feedback-section";
+        accDiv.innerHTML = `<h3>Technical Assessment</h3><p>${evaluation.technical_accuracy}</p>`;
+        details.appendChild(accDiv);
+      }
+
+      if (evaluation.strengths && evaluation.strengths.length > 0) {
+        const strDiv = document.createElement("div");
+        strDiv.className = "feedback-section";
+        strDiv.innerHTML = `<h3>Strengths</h3><ul class="feedback-list">${evaluation.strengths.map(s => `<li>${s}</li>`).join("")}</ul>`;
+        details.appendChild(strDiv);
+      }
+
+      if (evaluation.missing_points && evaluation.missing_points.length > 0) {
+        const missDiv = document.createElement("div");
+        missDiv.className = "feedback-section";
+        missDiv.innerHTML = `<h3>Areas for Improvement</h3><ul class="feedback-list">${evaluation.missing_points.map(m => `<li>${m}</li>`).join("")}</ul>`;
+        details.appendChild(missDiv);
+      }
+    }
+
+    async function loadSessionSummary(sessionId) {
+      try {
+        const summary = await fetchApi(`/sessions/${sessionId}/summary`);
+
+        document.getElementById("session-summary-rec").textContent = summary.overall_recommendation;
+        document.getElementById("summary-avg-score").textContent = `${summary.average_score} / 10`;
+        document.getElementById("summary-total-turns").textContent = summary.total_turns_evaluated;
+        document.getElementById("summary-followups-count").textContent = summary.follow_up_questions_count;
+
+        const tableBody = document.getElementById("summary-table-body");
+        tableBody.innerHTML = "";
+        (summary.score_breakdown || []).forEach((item) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td><strong>#${item.turn_number}</strong></td>
+            <td><span class="badge ${item.is_follow_up ? 'badge-followup' : 'badge-bank'}">${item.is_follow_up ? 'Follow-Up' : 'Bank'}</span></td>
+            <td>${item.question}</td>
+            <td><strong>${item.score} / 10</strong></td>
+          `;
+          tableBody.appendChild(row);
+        });
+
+        const strList = document.getElementById("summary-strengths-list");
+        strList.innerHTML = "";
+        (summary.top_strengths || []).forEach((s) => {
+          const li = document.createElement("li");
+          li.textContent = s;
+          strList.appendChild(li);
+        });
+
+        const impList = document.getElementById("summary-improvements-list");
+        impList.innerHTML = "";
+        (summary.key_areas_for_improvement || []).forEach((m) => {
+          const li = document.createElement("li");
+          li.textContent = m;
+          impList.appendChild(li);
+        });
+
+        sessionSummaryCard.classList.remove("hidden");
+      } catch (err) {
+        setStatus(err.message, true);
+      }
+    }
+
+    function resetSessionView() {
+      activeSessionId = null;
+      sessionActiveCard.classList.add("hidden");
+      sessionEvalCard.classList.add("hidden");
+      sessionSummaryCard.classList.add("hidden");
+      document.getElementById("session-setup").classList.remove("hidden");
+      setStatus("");
+    }
+
+    // ==========================================
+    // PRACTICE MODE (Existing Phase 1 & 2)
+    // ==========================================
+
     async function getRandomQuestion() {
       newQuestionButton.disabled = true;
       feedbackBox.classList.add("hidden");
@@ -402,27 +887,16 @@
       setStatus("Finding a question...");
 
       try {
-        const parameters = new URLSearchParams();
+        const params = new URLSearchParams();
+        if (categoryFilter.value) params.append("category", categoryFilter.value);
+        if (difficultyFilter.value) params.append("difficulty", difficultyFilter.value);
 
-        if (categoryFilter.value) {
-          parameters.append("category", categoryFilter.value);
-        }
-
-        if (difficultyFilter.value) {
-          parameters.append("difficulty", difficultyFilter.value);
-        }
-
-        const query = parameters.toString();
-
-        const path = query
-          ? `/questions/random?${query}`
-          : "/questions/random";
-
+        const query = params.toString();
+        const path = query ? `/questions/random?${query}` : "/questions/random";
         const data = await fetchApi(path);
         const question = data.question;
 
         currentQuestionId = question.id;
-
         document.getElementById("category").textContent = question.category;
         document.getElementById("difficulty").textContent = question.difficulty;
         document.getElementById("question").textContent = question.question;
@@ -431,7 +905,6 @@
         questionBox.classList.remove("hidden");
         submitAnswerButton.disabled = false;
         viewAnswersButton.disabled = false;
-
         setStatus("");
       } catch (error) {
         setStatus(error.message, true);
@@ -440,7 +913,7 @@
       }
     }
 
-    async function submitAnswer() {
+    async function submitPracticeAnswer() {
       const answer = document.getElementById("answer").value.trim();
 
       if (!currentQuestionId) {
@@ -461,16 +934,13 @@
           `/questions/${currentQuestionId}/answers`,
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ answer })
           }
         );
 
         await showFeedback(submission.answer_id);
         await getStats();
-
         setStatus("Answer submitted successfully.");
       } catch (error) {
         setStatus(error.message, true);
@@ -529,10 +999,7 @@
       setStatus("Loading previous answers...");
 
       try {
-        const data = await fetchApi(
-          `/questions/${currentQuestionId}/answers`
-        );
-
+        const data = await fetchApi(`/questions/${currentQuestionId}/answers`);
         const answersList = document.getElementById("previous-answers");
         answersList.innerHTML = "";
 

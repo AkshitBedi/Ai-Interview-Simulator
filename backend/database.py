@@ -88,6 +88,30 @@ def create_tables():
         "CREATE INDEX IF NOT EXISTS idx_answers_question_id ON answers(question_id)"
     )
 
+    # Migrate answers.question_id to be nullable so follow-up answers with question_id=NULL are supported
+    answers_cols_info = {
+        row["name"]: row
+        for row in connection.execute("PRAGMA table_info(answers)").fetchall()
+    }
+    if "question_id" in answers_cols_info and answers_cols_info["question_id"]["notnull"] == 1:
+        connection.execute("PRAGMA foreign_keys = OFF")
+        connection.execute("ALTER TABLE answers RENAME TO _answers_old_nn")
+        connection.execute("""
+            CREATE TABLE answers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                question_id INTEGER,
+                answer TEXT NOT NULL,
+                FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE SET NULL
+            )
+        """)
+        connection.execute("""
+            INSERT INTO answers (id, question_id, answer)
+            SELECT id, question_id, answer FROM _answers_old_nn
+        """)
+        connection.execute("DROP TABLE _answers_old_nn")
+        connection.execute("CREATE INDEX IF NOT EXISTS idx_answers_question_id ON answers(question_id)")
+        connection.execute("PRAGMA foreign_keys = ON")
+
     connection.execute("""
         CREATE TABLE IF NOT EXISTS evaluations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -102,9 +126,107 @@ def create_tables():
         )
     """)
 
+    # Repair any stale foreign key reference if answers was renamed
+    eval_fks = [
+        dict(r) for r in connection.execute("PRAGMA foreign_key_list(evaluations)").fetchall()
+    ]
+    if eval_fks and any(fk["table"] != "answers" for fk in eval_fks):
+        connection.execute("PRAGMA foreign_keys = OFF")
+        connection.execute("ALTER TABLE evaluations RENAME TO _eval_stale_fk")
+        connection.execute("""
+            CREATE TABLE evaluations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                answer_id INTEGER NOT NULL UNIQUE,
+                score INTEGER NOT NULL,
+                feedback TEXT NOT NULL,
+                technical_accuracy TEXT,
+                strengths TEXT,
+                missing_points TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (answer_id) REFERENCES answers(id) ON DELETE CASCADE
+            )
+        """)
+        connection.execute("""
+            INSERT INTO evaluations (id, answer_id, score, feedback, technical_accuracy, strengths, missing_points, created_at)
+            SELECT id, answer_id, score, feedback, technical_accuracy, strengths, missing_points, created_at FROM _eval_stale_fk
+        """)
+        connection.execute("DROP TABLE _eval_stale_fk")
+        connection.execute("PRAGMA foreign_keys = ON")
+
     connection.execute(
         "CREATE INDEX IF NOT EXISTS idx_evaluations_answer_id ON evaluations(answer_id)"
     )
+
+    # Phase 3: Interview sessions and conversational turns
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS interview_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT,
+            difficulty TEXT,
+            status TEXT NOT NULL DEFAULT 'active',
+            current_turn INTEGER NOT NULL DEFAULT 1,
+            max_turns INTEGER NOT NULL DEFAULT 5,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            completed_at TIMESTAMP
+        )
+    """)
+
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sessions_status ON interview_sessions(status)"
+    )
+
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS session_turns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER NOT NULL,
+            turn_number INTEGER NOT NULL,
+            question_id INTEGER,
+            question_text TEXT NOT NULL,
+            is_follow_up BOOLEAN NOT NULL DEFAULT 0,
+            parent_turn_id INTEGER,
+            answer_id INTEGER,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (session_id) REFERENCES interview_sessions(id) ON DELETE CASCADE,
+            FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE SET NULL,
+            FOREIGN KEY (parent_turn_id) REFERENCES session_turns(id) ON DELETE SET NULL,
+            FOREIGN KEY (answer_id) REFERENCES answers(id) ON DELETE SET NULL
+        )
+    """)
+
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_session_turns_session ON session_turns(session_id)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_session_turns_question ON session_turns(question_id)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_session_turns_answer ON session_turns(answer_id)"
+    )
+
+    # Seed baseline question bank if empty or placeholder only
+    seed_count = connection.execute(
+        "SELECT COUNT(*) FROM questions WHERE question != 'stringstri'"
+    ).fetchone()[0]
+
+    if seed_count < 5:
+        initial_questions = [
+            ("Python", "medium", "Explain how memory management and the Global Interpreter Lock (GIL) work in CPython."),
+            ("Python", "beginner", "What are Python generators and the yield keyword, and when would you use them over a standard list?"),
+            ("Python", "medium", "Explain how Python decorators work under the hood, and how you would write a decorator that accepts arguments."),
+            ("Python", "hard", "How does Python's asyncio event loop handle cooperative multitasking for high-concurrency I/O?"),
+            ("Databases", "medium", "Explain the difference between clustered and non-clustered indexes in relational databases."),
+            ("Databases", "hard", "What are ACID properties in database transactions, and how does isolation level affect concurrency anomalies?"),
+            ("Databases", "beginner", "Explain the difference between INNER JOIN, LEFT JOIN, and FULL OUTER JOIN with practical examples."),
+            ("System Design", "medium", "What is the difference between horizontal and vertical scaling, and what challenges arise with horizontal scaling?"),
+            ("System Design", "hard", "Explain how caching strategies like Cache-Aside, Write-Through, and Write-Back work."),
+            ("Behavioral", "medium", "Describe a challenging technical bug or outage you diagnosed. What was your debugging methodology?"),
+            ("Behavioral", "medium", "How do you handle disagreement with a teammate or lead regarding architectural decisions or code reviews?")
+        ]
+        connection.executemany(
+            "INSERT INTO questions (category, difficulty, question) VALUES (?, ?, ?)",
+            initial_questions
+        )
 
     connection.commit()
     connection.close()
