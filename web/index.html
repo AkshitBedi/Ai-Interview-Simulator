@@ -1,207 +1,497 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Interview Simulator</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Interview Simulator</title>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f7fb;
-            margin: 0;
-            padding: 40px 16px;
-        }
+  <style>
+    :root {
+      --blue: #2563eb;
+      --blue-dark: #1d4ed8;
+      --background: #f4f7fb;
+      --text: #172033;
+      --muted: #5d6b82;
+      --border: #dce3ef;
+      --question-bg: #eef4ff;
+      --feedback-bg: #ecfdf5;
+      --history-bg: #fff7ed;
+      --error: #b91c1c;
+    }
 
-        main {
-            max-width: 700px;
-            margin: auto;
-            background: white;
-            padding: 32px;
-            border-radius: 12px;
-            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
-        }
+    * {
+      box-sizing: border-box;
+    }
 
-        h1 {
-            margin-top: 0;
-            color: #1e3a5f;
-        }
+    body {
+      margin: 0;
+      padding: 40px 16px;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background: var(--background);
+    }
 
-        button {
-            background: #2563eb;
-            color: white;
-            border: 0;
-            border-radius: 6px;
-            padding: 12px 18px;
-            font-size: 16px;
-            cursor: pointer;
-            margin: 8px 0;
-        }
+    main {
+      max-width: 760px;
+      margin: auto;
+      padding: 32px;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 8px 26px rgba(15, 23, 42, 0.12);
+    }
 
-        button:hover {
-            background: #1d4ed8;
-        }
+    h1 {
+      margin-top: 0;
+      color: #1e3a5f;
+    }
 
-        textarea {
-            width: 100%;
-            min-height: 130px;
-            margin-top: 12px;
-            padding: 12px;
-            box-sizing: border-box;
-            font: inherit;
-        }
+    h2 {
+      margin-top: 0;
+      font-size: 20px;
+    }
 
-        #question-box,
-        #feedback-box {
-            margin: 20px 0;
-            padding: 16px;
-            border-radius: 8px;
-            background: #eef4ff;
-        }
+    .stats {
+      display: flex;
+      gap: 16px;
+      margin: 20px 0;
+    }
 
-        #feedback-box {
-            background: #ecfdf5;
-        }
+    .stat-card {
+      flex: 1;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #f8fafc;
+    }
 
-        .hidden {
-            display: none;
-        }
-    </style>
+    .stat-card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .stat-card strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 28px;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+      margin: 24px 0;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    select,
+    textarea {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 10px;
+      font: inherit;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      resize: vertical;
+      margin: 12px 0;
+    }
+
+    button {
+      padding: 11px 18px;
+      border: 0;
+      border-radius: 7px;
+      color: white;
+      font: inherit;
+      font-weight: bold;
+      background: var(--blue);
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--blue-dark);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .card {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    #question-box {
+      background: var(--question-bg);
+    }
+
+    #feedback-box {
+      background: var(--feedback-bg);
+    }
+
+    #previous-answers-box {
+      background: var(--history-bg);
+    }
+
+    .answer-item {
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 7px;
+      background: white;
+      border: 1px solid #fed7aa;
+      line-height: 1.5;
+    }
+
+    #status {
+      min-height: 24px;
+      margin-top: 10px;
+      color: var(--muted);
+    }
+
+    #status.error {
+      color: var(--error);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 560px) {
+      main {
+        padding: 22px;
+      }
+
+      .stats {
+        flex-direction: column;
+      }
+
+      .filters {
+        align-items: stretch;
+      }
+    }
+  </style>
 </head>
 
 <body>
-    <main>
-        <h1>AI Interview Simulator</h1>
-        <label for="category-filter">Category:</label>
+  <main>
+    <h1>AI Interview Simulator</h1>
+
+    <section class="stats" aria-label="Interview statistics">
+      <div class="stat-card">
+        <p>Total questions</p>
+        <strong id="question-count">0</strong>
+      </div>
+
+      <div class="stat-card">
+        <p>Total answers</p>
+        <strong id="answer-count">0</strong>
+      </div>
+    </section>
+
+    <section class="filters" aria-label="Question filters">
+      <div class="field">
+        <label for="category-filter">Category</label>
         <select id="category-filter">
-            <option value="">Any category</option>
-            <option value="Python">Python</option>
-            <option value="Interview">Interview</option>
+          <option value="">Any category</option>
         </select>
+      </div>
 
-        <label for="difficulty-filter">Difficulty:</label>
+      <div class="field">
+        <label for="difficulty-filter">Difficulty</label>
         <select id="difficulty-filter">
-            <option value="">Any difficulty</option>
-            <option value="beginner">Beginner</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
+          <option value="">Any difficulty</option>
         </select>
+      </div>
 
-        <button type="button" id="new-question-button">Get Random Question</button>
+      <button type="button" id="new-question-button">
+        Get Random Question
+      </button>
+    </section>
 
-        <section id="question-box" class="hidden">
-            <p><strong id="category"></strong> · <strong id="difficulty"></strong></p>
-            <h2 id="question"></h2>
+    <p id="status" role="status"></p>
 
-            <textarea id="answer" placeholder="Write your interview answer here..."></textarea>
+    <section id="question-box" class="card hidden">
+      <p>
+        <strong id="category"></strong>
+        &middot;
+        <strong id="difficulty"></strong>
+      </p>
 
-            <button type="button" id="submit-answer-button">Submit Answer</button>
-        </section>
+      <h2 id="question"></h2>
 
-        <section id="feedback-box" class="hidden">
-            <h2>Feedback</h2>
-            <p id="feedback"></p>
-        </section>
-    </main>
+      <label for="answer">Your answer</label>
+      <textarea
+        id="answer"
+        minlength="10"
+        placeholder="Write your interview answer here..."
+      ></textarea>
 
-    <script>
-        const API_URL = "http://127.0.0.1:8000";
-        let currentQuestionId = null;
+      <div class="button-row">
+        <button type="button" id="submit-answer-button" disabled>
+          Submit Answer
+        </button>
 
-        const newQuestionButton = document.getElementById("new-question-button");
-        const submitAnswerButton = document.getElementById("submit-answer-button");
-        const questionBox = document.getElementById("question-box");
-        const feedbackBox = document.getElementById("feedback-box");
+        <button type="button" id="view-answers-button" disabled>
+          View Previous Answers
+        </button>
+      </div>
+    </section>
 
-        newQuestionButton.addEventListener("click", getRandomQuestion);
+    <section id="feedback-box" class="card hidden">
+      <h2>Feedback</h2>
+      <p id="feedback"></p>
+    </section>
 
-        submitAnswerButton.addEventListener("click", async (event) => {
-            event.preventDefault();
-            await submitAnswer();
-        });
+    <section id="previous-answers-box" class="card hidden">
+      <h2>Previous Answers</h2>
+      <div id="previous-answers"></div>
+    </section>
+  </main>
 
-        async function getRandomQuestion() {
-            
-            feedbackBox.classList.add("hidden");
+  <script>
+    const API_URL = "http://127.0.0.1:8000";
 
-            const category = document.getElementById("category-filter").value;
-            const difficulty = document.getElementById("difficulty-filter").value;
+    let currentQuestionId = null;
 
-            const parameters = new URLSearchParams();
+    const categoryFilter = document.getElementById("category-filter");
+    const difficultyFilter = document.getElementById("difficulty-filter");
+    const newQuestionButton = document.getElementById("new-question-button");
+    const submitAnswerButton = document.getElementById("submit-answer-button");
+    const viewAnswersButton = document.getElementById("view-answers-button");
+    const questionBox = document.getElementById("question-box");
+    const feedbackBox = document.getElementById("feedback-box");
+    const previousAnswersBox = document.getElementById("previous-answers-box");
+    const statusMessage = document.getElementById("status");
 
-            if (category) {
-                parameters.append("category", category);
-            }
+    newQuestionButton.addEventListener("click", getRandomQuestion);
+    submitAnswerButton.addEventListener("click", submitAnswer);
+    viewAnswersButton.addEventListener("click", getPreviousAnswers);
 
-            if (difficulty) {
-                parameters.append("difficulty", difficulty);
-            }
+    initializePage();
 
-            const url = parameters.toString()
-                ? `${API_URL}/questions/random?${parameters}`
-                : `${API_URL}/questions/random`;
+    async function initializePage() {
+      try {
+        setStatus("Loading interview data...");
+        await Promise.all([getStats(), loadFilters()]);
+        setStatus("");
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    }
 
-            const response = await fetch(url);
-            const data = await response.json();
+    async function fetchApi(path, options = {}) {
+      const response = await fetch(`${API_URL}${path}`, options);
 
-            if (!response.ok) {
-                alert(data.detail);
-                return;
-            }
+      let data = {};
 
-            currentQuestionId = data.question.id;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("The server returned an unreadable response.");
+      }
 
-            document.getElementById("category").textContent = data.question.category;
-            document.getElementById("difficulty").textContent = data.question.difficulty;
-            document.getElementById("question").textContent = data.question.question;
-            document.getElementById("answer").value = "";
+      if (!response.ok) {
+        throw new Error(data.detail || "Something went wrong.");
+      }
 
-            questionBox.classList.remove("hidden");
+      return data;
+    }
+
+    async function getStats() {
+      const data = await fetchApi("/stats");
+
+      document.getElementById("question-count").textContent =
+        data.total_questions;
+
+      document.getElementById("answer-count").textContent =
+        data.total_answers;
+    }
+
+    async function loadFilters() {
+      const data = await fetchApi("/questions?limit=100");
+      const questions = data.questions || [];
+
+      const categories = [...new Set(
+        questions.map((question) => question.category)
+      )].sort();
+
+      const difficulties = [...new Set(
+        questions.map((question) => question.difficulty)
+      )].sort();
+
+      addOptions(categoryFilter, categories, "Any category");
+      addOptions(difficultyFilter, difficulties, "Any difficulty");
+    }
+
+    function addOptions(selectElement, values, defaultLabel) {
+      selectElement.innerHTML = "";
+
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = defaultLabel;
+      selectElement.appendChild(defaultOption);
+
+      values.forEach((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        selectElement.appendChild(option);
+      });
+    }
+
+    async function getRandomQuestion() {
+      newQuestionButton.disabled = true;
+      feedbackBox.classList.add("hidden");
+      previousAnswersBox.classList.add("hidden");
+      setStatus("Finding a question...");
+
+      try {
+        const parameters = new URLSearchParams();
+
+        if (categoryFilter.value) {
+          parameters.append("category", categoryFilter.value);
         }
 
-        async function submitAnswer() {
-            const answer = document.getElementById("answer").value;
-
-            const response = await fetch(
-                `${API_URL}/questions/${currentQuestionId}/answers`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ answer })
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                alert(data.detail);
-                return;
-            }
-
-            await getFeedback(data.answer_id);
+        if (difficultyFilter.value) {
+          parameters.append("difficulty", difficultyFilter.value);
         }
 
-        async function getFeedback(answerId) {
-            const response = await fetch(
-                `${API_URL}/answers/${answerId}/feedback`
-            );
+        const query = parameters.toString();
 
-            const data = await response.json();
+        const path = query
+          ? `/questions/random?${query}`
+          : "/questions/random";
 
-            if (!response.ok) {
-                alert(data.detail);
-                return;
-            }
+        const data = await fetchApi(path);
+        const question = data.question;
 
-            document.getElementById("feedback").textContent =
-                `Word count: ${data.word_count}. ${data.feedback}`;
+        currentQuestionId = question.id;
 
-            feedbackBox.classList.remove("hidden");
+        document.getElementById("category").textContent = question.category;
+        document.getElementById("difficulty").textContent = question.difficulty;
+        document.getElementById("question").textContent = question.question;
+        document.getElementById("answer").value = "";
+
+        questionBox.classList.remove("hidden");
+        submitAnswerButton.disabled = false;
+        viewAnswersButton.disabled = false;
+
+        setStatus("");
+      } catch (error) {
+        setStatus(error.message, true);
+      } finally {
+        newQuestionButton.disabled = false;
+      }
+    }
+
+    async function submitAnswer() {
+      const answer = document.getElementById("answer").value.trim();
+
+      if (!currentQuestionId) {
+        setStatus("Please get a question first.", true);
+        return;
+      }
+
+      if (answer.length < 10) {
+        setStatus("Your answer must contain at least 10 characters.", true);
+        return;
+      }
+
+      submitAnswerButton.disabled = true;
+      setStatus("Submitting your answer...");
+
+      try {
+        const submission = await fetchApi(
+          `/questions/${currentQuestionId}/answers`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ answer })
+          }
+        );
+
+        await showFeedback(submission.answer_id);
+        await getStats();
+
+        setStatus("Answer submitted successfully.");
+      } catch (error) {
+        setStatus(error.message, true);
+      } finally {
+        submitAnswerButton.disabled = false;
+      }
+    }
+
+    async function showFeedback(answerId) {
+      const data = await fetchApi(`/answers/${answerId}/feedback`);
+
+      document.getElementById("feedback").textContent =
+        `Word count: ${data.word_count}. ${data.feedback}`;
+
+      feedbackBox.classList.remove("hidden");
+    }
+
+    async function getPreviousAnswers() {
+      if (!currentQuestionId) {
+        setStatus("Please get a question first.", true);
+        return;
+      }
+
+      viewAnswersButton.disabled = true;
+      setStatus("Loading previous answers...");
+
+      try {
+        const data = await fetchApi(
+          `/questions/${currentQuestionId}/answers`
+        );
+
+        const answersList = document.getElementById("previous-answers");
+        answersList.innerHTML = "";
+
+        if (data.answers.length === 0) {
+          answersList.textContent = "No answers have been submitted yet.";
+        } else {
+          data.answers.forEach((item, index) => {
+            const answerItem = document.createElement("div");
+            answerItem.className = "answer-item";
+            answerItem.textContent = `${index + 1}. ${item.answer}`;
+            answersList.appendChild(answerItem);
+          });
         }
-    </script>
+
+        previousAnswersBox.classList.remove("hidden");
+        setStatus("");
+      } catch (error) {
+        setStatus(error.message, true);
+      } finally {
+        viewAnswersButton.disabled = false;
+      }
+    }
+
+    function setStatus(message, isError = false) {
+      statusMessage.textContent = message;
+      statusMessage.classList.toggle("error", isError);
+    }
+  </script>
 </body>
-
 </html>

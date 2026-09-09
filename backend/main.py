@@ -1,4 +1,9 @@
-from database import create_tables, get_db
+try:
+    # Works when started from the repository root: uvicorn backend.main:app
+    from .database import create_tables, get_db
+except ImportError:
+    # Works when started inside backend: uvicorn main:app
+    from database import create_tables, get_db
 from typing import Literal
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, Query
@@ -28,7 +33,7 @@ def say_hello(name: str):
     return {"message": f"Hello, {name}!"}   
 
 class InterviewAnswer(BaseModel):
-    question: str = Field(min_length=5)
+    question_id: int
     answer: str = Field(min_length=10)
 
 
@@ -36,16 +41,26 @@ class InterviewAnswer(BaseModel):
 def submit_answer(interview_answer: InterviewAnswer):
     connection = get_db()
 
+    question_row = connection.execute(
+        "SELECT question FROM questions WHERE id = ?",
+        (interview_answer.question_id,)
+    ).fetchone()
+
+    if question_row is None:
+        connection.close()
+        raise HTTPException(status_code=404, detail="Question not found")
+
     cursor = connection.execute(
-        "INSERT INTO answers (question, answer) VALUES (?, ?)",
-        (interview_answer.question, interview_answer.answer)
+        "INSERT INTO answers (question_id, answer) VALUES (?, ?)",
+        (interview_answer.question_id, interview_answer.answer)
     )
 
     connection.commit()
 
     new_answer = {
         "id": cursor.lastrowid,
-        "question": interview_answer.question,
+        "question_id": interview_answer.question_id,
+        "question": question_row["question"],
         "answer": interview_answer.answer
     }
 
@@ -61,7 +76,12 @@ def get_answers():
     connection = get_db()
 
     rows = connection.execute(
-        "SELECT id, question, answer FROM answers"
+        """
+        SELECT answers.id, answers.question_id, questions.question, answers.answer
+        FROM answers
+        JOIN questions ON questions.id = answers.question_id
+        ORDER BY answers.id DESC
+        """
     ).fetchall()
 
     connection.close()
@@ -73,7 +93,12 @@ def get_answer(answer_id: int):
     connection = get_db()
 
     row = connection.execute(
-        "SELECT id, question, answer FROM answers WHERE id = ?",
+        """
+        SELECT answers.id, answers.question_id, questions.question, answers.answer
+        FROM answers
+        JOIN questions ON questions.id = answers.question_id
+        WHERE answers.id = ?
+        """,
         (answer_id,)
     ).fetchone()
 
@@ -105,13 +130,26 @@ def delete_answer(answer_id: int):
 def update_answer(answer_id: int, updated_answer: InterviewAnswer):
     connection = get_db()
 
+    question_row = connection.execute(
+        "SELECT question FROM questions WHERE id = ?",
+        (updated_answer.question_id,)
+    ).fetchone()
+
+    if question_row is None:
+        connection.close()
+        raise HTTPException(status_code=404, detail="Question not found")
+
     cursor = connection.execute(
         """
         UPDATE answers
-        SET question = ?, answer = ?
+        SET question_id = ?, answer = ?
         WHERE id = ?
         """,
-        (updated_answer.question, updated_answer.answer, answer_id)
+        (
+            updated_answer.question_id,
+            updated_answer.answer,
+            answer_id,
+        )
     )
 
     connection.commit()
@@ -124,7 +162,8 @@ def update_answer(answer_id: int, updated_answer: InterviewAnswer):
         "message": "Answer updated!",
         "answer": {
             "id": answer_id,
-            "question": updated_answer.question,
+            "question_id": updated_answer.question_id,
+            "question": question_row["question"],
             "answer": updated_answer.answer
         }
     }
@@ -293,6 +332,13 @@ def update_question(question_id: int, updated_question: InterviewQuestionUpdate)
 def delete_question(question_id: int):
     connection = get_db()
 
+    # Supports both new databases (which use ON DELETE CASCADE) and databases
+    # migrated from the earlier text-based answers table.
+    connection.execute(
+        "DELETE FROM answers WHERE question_id = ?",
+        (question_id,)
+    )
+
     cursor = connection.execute(
         "DELETE FROM questions WHERE id = ?",
         (question_id,)
@@ -338,8 +384,8 @@ def answer_question(question_id: int, submission: AnswerSubmission):
         raise HTTPException(status_code=404, detail="Question not found")
 
     cursor = connection.execute(
-        "INSERT INTO answers (question, answer) VALUES (?, ?)",
-        (question_row["question"], submission.answer)
+        "INSERT INTO answers (question_id, answer) VALUES (?, ?)",
+        (question_id, submission.answer)
     )
 
     connection.commit()
@@ -366,12 +412,12 @@ def get_question_answers(question_id: int):
 
     answer_rows = connection.execute(
         """
-        SELECT id, question, answer
+        SELECT id, question_id, answer
         FROM answers
-        WHERE question = ?
+        WHERE question_id = ?
         ORDER BY id DESC
         """,
-        (question_row["question"],)
+        (question_id,)
     ).fetchall()
 
     connection.close()
