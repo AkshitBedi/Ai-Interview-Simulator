@@ -2,8 +2,17 @@ from database import create_tables, get_db
 from typing import Literal
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 create_tables()
 
 @app.get("/")

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Interview Simulator</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 40px 16px;
+        }
+
+        main {
+            max-width: 700px;
+            margin: auto;
+            background: white;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #1e3a5f;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: 0;
+            border-radius: 6px;
+            padding: 12px 18px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 8px 0;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 130px;
+            margin-top: 12px;
+            padding: 12px;
+            box-sizing: border-box;
+            font: inherit;
+        }
+
+        #question-box,
+        #feedback-box {
+            margin: 20px 0;
+            padding: 16px;
+            border-radius: 8px;
+            background: #eef4ff;
+        }
+
+        #feedback-box {
+            background: #ecfdf5;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>AI Interview Simulator</h1>
+        <label for="category-filter">Category:</label>
+        <select id="category-filter">
+            <option value="">Any category</option>
+            <option value="Python">Python</option>
+            <option value="Interview">Interview</option>
+        </select>
+
+        <label for="difficulty-filter">Difficulty:</label>
+        <select id="difficulty-filter">
+            <option value="">Any difficulty</option>
+            <option value="beginner">Beginner</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+        </select>
+
+        <button type="button" id="new-question-button">Get Random Question</button>
+
+        <section id="question-box" class="hidden">
+            <p><strong id="category"></strong> · <strong id="difficulty"></strong></p>
+            <h2 id="question"></h2>
+
+            <textarea id="answer" placeholder="Write your interview answer here..."></textarea>
+
+            <button type="button" id="submit-answer-button">Submit Answer</button>
+        </section>
+
+        <section id="feedback-box" class="hidden">
+            <h2>Feedback</h2>
+            <p id="feedback"></p>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+        let currentQuestionId = null;
+
+        const newQuestionButton = document.getElementById("new-question-button");
+        const submitAnswerButton = document.getElementById("submit-answer-button");
+        const questionBox = document.getElementById("question-box");
+        const feedbackBox = document.getElementById("feedback-box");
+
+        newQuestionButton.addEventListener("click", getRandomQuestion);
+
+        submitAnswerButton.addEventListener("click", async (event) => {
+            event.preventDefault();
+            await submitAnswer();
+        });
+
+        async function getRandomQuestion() {
+            
+            feedbackBox.classList.add("hidden");
+
+            const category = document.getElementById("category-filter").value;
+            const difficulty = document.getElementById("difficulty-filter").value;
+
+            const parameters = new URLSearchParams();
+
+            if (category) {
+                parameters.append("category", category);
+            }
+
+            if (difficulty) {
+                parameters.append("difficulty", difficulty);
+            }
+
+            const url = parameters.toString()
+                ? `${API_URL}/questions/random?${parameters}`
+                : `${API_URL}/questions/random`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.detail);
+                return;
+            }
+
+            currentQuestionId = data.question.id;
+
+            document.getElementById("category").textContent = data.question.category;
+            document.getElementById("difficulty").textContent = data.question.difficulty;
+            document.getElementById("question").textContent = data.question.question;
+            document.getElementById("answer").value = "";
+
+            questionBox.classList.remove("hidden");
+        }
+
+        async function submitAnswer() {
+            const answer = document.getElementById("answer").value;
+
+            const response = await fetch(
+                `${API_URL}/questions/${currentQuestionId}/answers`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ answer })
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.detail);
+                return;
+            }
+
+            await getFeedback(data.answer_id);
+        }
+
+        async function getFeedback(answerId) {
+            const response = await fetch(
+                `${API_URL}/answers/${answerId}/feedback`
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.detail);
+                return;
+            }
+
+            document.getElementById("feedback").textContent =
+                `Word count: ${data.word_count}. ${data.feedback}`;
+
+            feedbackBox.classList.remove("hidden");
+        }
+    </script>
+</body>
+
+</html>
