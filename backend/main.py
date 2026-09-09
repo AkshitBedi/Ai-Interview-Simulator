@@ -399,14 +399,20 @@ def get_answer_feedback(answer_id: int):
     word_count = len(row["answer"].split())
 
     if word_count < 15:
+        score = 3
         feedback = "Your answer is too short. Add more explanation and an example."
     elif word_count < 40:
+        score = 6
         feedback = "Good start. Add a specific example to make your answer stronger."
     else:
+        score = 9
         feedback = "Strong detailed answer. Keep your explanation structured and clear."
 
     return {
         "answer_id": answer_id,
         "word_count": word_count,
+        "score": score,
         "feedback": feedback
+        
+        
     }
