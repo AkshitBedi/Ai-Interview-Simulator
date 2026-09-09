@@ -17,6 +17,16 @@ def create_tables():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             question TEXT NOT NULL,
             answer TEXT NOT NULL
+            
+        )
+        
+    """)
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT NOT NULL,
+            difficulty TEXT NOT NULL,
+            question TEXT NOT NULL
         )
     """)
 
