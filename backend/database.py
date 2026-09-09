@@ -88,5 +88,23 @@ def create_tables():
         "CREATE INDEX IF NOT EXISTS idx_answers_question_id ON answers(question_id)"
     )
 
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS evaluations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            answer_id INTEGER NOT NULL UNIQUE,
+            score INTEGER NOT NULL,
+            feedback TEXT NOT NULL,
+            technical_accuracy TEXT,
+            strengths TEXT,
+            missing_points TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (answer_id) REFERENCES answers(id) ON DELETE CASCADE
+        )
+    """)
+
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_evaluations_answer_id ON evaluations(answer_id)"
+    )
+
     connection.commit()
     connection.close()

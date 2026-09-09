@@ -148,6 +148,41 @@
       background: var(--feedback-bg);
     }
 
+    .feedback-score-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 9999px;
+      background: #16a34a;
+      color: white;
+      margin-bottom: 12px;
+    }
+
+    .feedback-section {
+      margin-top: 12px;
+    }
+
+    .feedback-section h3 {
+      font-size: 0.95rem;
+      margin: 8px 0 4px 0;
+      color: #166534;
+    }
+
+    .feedback-list {
+      margin: 4px 0 0 18px;
+      padding: 0;
+      color: #14532d;
+    }
+
+    .feedback-meta {
+      margin-top: 14px;
+      font-size: 0.8rem;
+      color: #15803d;
+      border-top: 1px dashed #bbf7d0;
+      padding-top: 8px;
+    }
+
     #previous-answers-box {
       background: var(--history-bg);
     }
@@ -257,8 +292,10 @@
     </section>
 
     <section id="feedback-box" class="card hidden">
-      <h2>Feedback</h2>
+      <h2>AI Evaluation & Feedback</h2>
+      <div id="feedback-score-container"></div>
       <p id="feedback"></p>
+      <div id="feedback-details"></div>
     </section>
 
     <section id="previous-answers-box" class="card hidden">
@@ -445,8 +482,39 @@
     async function showFeedback(answerId) {
       const data = await fetchApi(`/answers/${answerId}/feedback`);
 
-      document.getElementById("feedback").textContent =
-        `Word count: ${data.word_count}. ${data.feedback}`;
+      const scoreContainer = document.getElementById("feedback-score-container");
+      scoreContainer.innerHTML = `<span class="feedback-score-badge">Score: ${data.score} / 10</span>`;
+
+      document.getElementById("feedback").textContent = data.feedback;
+
+      const details = document.getElementById("feedback-details");
+      details.innerHTML = "";
+
+      if (data.technical_accuracy) {
+        const accDiv = document.createElement("div");
+        accDiv.className = "feedback-section";
+        accDiv.innerHTML = `<h3>Technical Assessment</h3><p>${data.technical_accuracy}</p>`;
+        details.appendChild(accDiv);
+      }
+
+      if (data.strengths && data.strengths.length > 0) {
+        const strDiv = document.createElement("div");
+        strDiv.className = "feedback-section";
+        strDiv.innerHTML = `<h3>Strengths</h3><ul class="feedback-list">${data.strengths.map(s => `<li>${s}</li>`).join("")}</ul>`;
+        details.appendChild(strDiv);
+      }
+
+      if (data.missing_points && data.missing_points.length > 0) {
+        const missDiv = document.createElement("div");
+        missDiv.className = "feedback-section";
+        missDiv.innerHTML = `<h3>Areas for Improvement</h3><ul class="feedback-list">${data.missing_points.map(m => `<li>${m}</li>`).join("")}</ul>`;
+        details.appendChild(missDiv);
+      }
+
+      const metaDiv = document.createElement("div");
+      metaDiv.className = "feedback-meta";
+      metaDiv.textContent = `Evaluator: ${data.evaluator || "AI Evaluator"} | Word count: ${data.word_count}${data.cached ? " (cached)" : ""}`;
+      details.appendChild(metaDiv);
 
       feedbackBox.classList.remove("hidden");
     }

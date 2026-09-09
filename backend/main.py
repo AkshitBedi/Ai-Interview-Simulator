@@ -1,9 +1,12 @@
+import json
 try:
     # Works when started from the repository root: uvicorn backend.main:app
     from .database import create_tables, get_db
+    from .evaluator import evaluate_interview_answer
 except ImportError:
     # Works when started inside backend: uvicorn main:app
     from database import create_tables, get_db
+    from evaluator import evaluate_interview_answer
 from typing import Literal
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, Query
@@ -433,32 +436,87 @@ def get_answer_feedback(answer_id: int):
     connection = get_db()
 
     row = connection.execute(
-        "SELECT answer FROM answers WHERE id = ?",
+        """
+        SELECT answers.id AS answer_id, answers.answer,
+               questions.id AS question_id, questions.question,
+               questions.category, questions.difficulty
+        FROM answers
+        JOIN questions ON questions.id = answers.question_id
+        WHERE answers.id = ?
+        """,
         (answer_id,)
     ).fetchone()
 
-    connection.close()
-
     if row is None:
+        connection.close()
         raise HTTPException(status_code=404, detail="Answer not found")
 
-    word_count = len(row["answer"].split())
+    # Check if this answer was already evaluated and cached
+    cached_eval = connection.execute(
+        """
+        SELECT score, feedback, technical_accuracy, strengths, missing_points
+        FROM evaluations
+        WHERE answer_id = ?
+        """,
+        (answer_id,)
+    ).fetchone()
 
-    if word_count < 15:
-        score = 3
-        feedback = "Your answer is too short. Add more explanation and an example."
-    elif word_count < 40:
-        score = 6
-        feedback = "Good start. Add a specific example to make your answer stronger."
-    else:
-        score = 9
-        feedback = "Strong detailed answer. Keep your explanation structured and clear."
+    if cached_eval is not None:
+        connection.close()
+        strengths = json.loads(cached_eval["strengths"]) if cached_eval["strengths"] else []
+        missing_points = json.loads(cached_eval["missing_points"]) if cached_eval["missing_points"] else []
+        return {
+            "answer_id": answer_id,
+            "question_id": row["question_id"],
+            "question": row["question"],
+            "word_count": len(row["answer"].split()),
+            "score": cached_eval["score"],
+            "feedback": cached_eval["feedback"],
+            "technical_accuracy": cached_eval["technical_accuracy"],
+            "strengths": strengths,
+            "missing_points": missing_points,
+            "cached": True
+        }
+
+    # Evaluate the answer in the specific context of the question
+    evaluation = evaluate_interview_answer(
+        question=row["question"],
+        category=row["category"],
+        difficulty=row["difficulty"],
+        answer=row["answer"]
+    )
+
+    strengths_json = json.dumps(evaluation.strengths)
+    missing_json = json.dumps(evaluation.missing_points)
+
+    connection.execute(
+        """
+        INSERT INTO evaluations (answer_id, score, feedback, technical_accuracy, strengths, missing_points)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            answer_id,
+            evaluation.score,
+            evaluation.feedback,
+            evaluation.technical_accuracy,
+            strengths_json,
+            missing_json
+        )
+    )
+
+    connection.commit()
+    connection.close()
 
     return {
         "answer_id": answer_id,
-        "word_count": word_count,
-        "score": score,
-        "feedback": feedback
-        
-        
+        "question_id": row["question_id"],
+        "question": row["question"],
+        "word_count": len(row["answer"].split()),
+        "score": evaluation.score,
+        "feedback": evaluation.feedback,
+        "technical_accuracy": evaluation.technical_accuracy,
+        "strengths": evaluation.strengths,
+        "missing_points": evaluation.missing_points,
+        "evaluator": getattr(evaluation, "evaluator", "ai-evaluator"),
+        "cached": False
     }
