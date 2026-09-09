@@ -204,6 +204,35 @@ def create_tables():
         "CREATE INDEX IF NOT EXISTS idx_session_turns_answer ON session_turns(answer_id)"
     )
 
+    # Phase 4: Speech Analytics and Communication Intelligence
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS speech_analytics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            answer_id INTEGER NOT NULL UNIQUE,
+            audio_duration_seconds REAL NOT NULL,
+            speaking_duration_seconds REAL NOT NULL,
+            pause_duration_seconds REAL NOT NULL,
+            pause_count INTEGER NOT NULL,
+            average_pause_duration REAL NOT NULL,
+            long_pause_count INTEGER NOT NULL,
+            speaking_rate_wpm REAL NOT NULL,
+            articulation_rate_wpm REAL NOT NULL,
+            filler_word_count INTEGER NOT NULL,
+            filler_rate REAL NOT NULL,
+            filler_breakdown TEXT,
+            repeated_words_count INTEGER NOT NULL,
+            phonation_ratio REAL NOT NULL,
+            delivery_score INTEGER NOT NULL,
+            delivery_feedback TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (answer_id) REFERENCES answers(id) ON DELETE CASCADE
+        )
+    """)
+
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_speech_analytics_answer_id ON speech_analytics(answer_id)"
+    )
+
     # Seed baseline question bank if empty or placeholder only
     seed_count = connection.execute(
         "SELECT COUNT(*) FROM questions WHERE question != 'stringstri'"

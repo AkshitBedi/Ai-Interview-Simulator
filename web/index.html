@@ -248,6 +248,187 @@
       color: #166534;
     }
 
+    /* Phase 4: Audio Recording & Communication Analysis Styles */
+    .answer-mode-toggle {
+      display: flex;
+      gap: 8px;
+      margin: 14px 0;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: 8px;
+      width: fit-content;
+    }
+
+    .mode-pill {
+      padding: 8px 14px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .mode-pill.active {
+      background: white;
+      color: var(--blue);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .audio-recorder-panel {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      text-align: center;
+      background: #f8fafc;
+      margin-top: 10px;
+    }
+
+    .recorder-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-record {
+      background: #dc2626;
+      color: white;
+    }
+
+    .btn-record:hover {
+      background: #b91c1c;
+    }
+
+    .btn-stop {
+      background: #475569;
+      color: white;
+    }
+
+    .btn-stop:hover {
+      background: #334155;
+    }
+
+    .recording-live {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .recording-dot {
+      width: 14px;
+      height: 14px;
+      background: #dc2626;
+      border-radius: 50%;
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.7; box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+      70% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+      100% { transform: scale(0.95); opacity: 0.7; box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    }
+
+    .recording-timer {
+      font-family: monospace;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #dc2626;
+    }
+
+    .audio-preview-container {
+      margin: 16px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .delivery-card {
+      background: #f0fdfa;
+      border-color: #99f6e4;
+      margin-top: 16px;
+    }
+
+    .delivery-card h2 {
+      color: #0f766e;
+    }
+
+    .delivery-score-pill {
+      display: inline-block;
+      padding: 6px 14px;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 9999px;
+      background: #0d9488;
+      color: white;
+      margin-bottom: 12px;
+    }
+
+    .metric-pill-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .metric-pill {
+      background: white;
+      border: 1px solid #ccfbf1;
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+
+    .metric-pill span {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .metric-pill strong {
+      font-size: 1.15rem;
+      color: #0f766e;
+    }
+
+    .metric-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .filler-tag {
+      display: inline-block;
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      margin: 2px 4px 2px 0;
+    }
+
+    .transcript-box {
+      background: white;
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      font-style: italic;
+      line-height: 1.5;
+    }
+
     .feedback-list {
       margin: 4px 0 0 18px;
       padding: 0;
@@ -419,26 +600,90 @@
 
         <h2 id="session-question-title"></h2>
 
-        <label for="session-answer-input">Your Answer</label>
-        <textarea
-          id="session-answer-input"
-          minlength="10"
-          placeholder="Type your technical response here (minimum 10 characters)..."
-        ></textarea>
+        <!-- Answer Mode Switcher -->
+        <div class="answer-mode-toggle" role="group" aria-label="Answer Mode">
+          <button type="button" class="mode-pill active" id="btn-mode-text">💬 Type Answer</button>
+          <button type="button" class="mode-pill" id="btn-mode-voice">🎙️ Voice Answer (Microphone)</button>
+        </div>
 
-        <div class="button-row">
-          <button type="button" id="session-submit-button">
-            Submit Answer & Advance
-          </button>
+        <!-- Text Answer Area -->
+        <div id="session-text-input-area">
+          <label for="session-answer-input">Your Answer</label>
+          <textarea
+            id="session-answer-input"
+            minlength="10"
+            placeholder="Type your technical response here (minimum 10 characters)..."
+          ></textarea>
+
+          <div class="button-row">
+            <button type="button" id="session-submit-button">
+              Submit Answer & Advance
+            </button>
+          </div>
+        </div>
+
+        <!-- Voice Answer Area -->
+        <div id="session-voice-input-area" class="hidden">
+          <div class="audio-recorder-panel">
+            <p style="margin-top: 0; color: var(--muted); font-size: 0.95rem;">
+              Click <strong>Start Recording</strong>, speak your answer into your microphone, then click <strong>Stop Recording</strong>.
+            </p>
+
+            <div id="recorder-idle-controls">
+              <button type="button" id="btn-record-start" class="recorder-btn btn-record">
+                🔴 Start Recording
+              </button>
+            </div>
+
+            <div id="recorder-live-controls" class="hidden">
+              <div class="recording-live">
+                <div class="recording-dot"></div>
+                <span class="recording-timer" id="recording-timer-display">00:00</span>
+              </div>
+              <button type="button" id="btn-record-stop" class="recorder-btn btn-stop">
+                ⏹️ Stop Recording
+              </button>
+            </div>
+
+            <div id="recorder-preview-controls" class="hidden">
+              <div class="audio-preview-container">
+                <audio id="session-audio-preview" controls></audio>
+                <div class="button-row" style="margin-top: 10px;">
+                  <button type="button" id="btn-submit-audio" class="recorder-btn" style="background: var(--blue);">
+                    🚀 Submit Voice Answer & Advance
+                  </button>
+                  <button type="button" id="btn-rerecord" class="recorder-btn" style="background: #94a3b8;">
+                    🔄 Discard & Re-record
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p id="audio-recording-status" style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0;"></p>
+          </div>
         </div>
       </section>
 
       <!-- Turn Evaluation Display -->
       <section id="session-evaluation-card" class="card session-feedback-card hidden">
-        <h2>Turn Evaluation & Feedback</h2>
+        <h2>Turn Technical Evaluation</h2>
         <div id="session-eval-score"></div>
         <p id="session-eval-feedback"></p>
         <div id="session-eval-details"></div>
+
+        <!-- Phase 4 Delivery Analysis Card -->
+        <div id="session-delivery-card" class="card delivery-card hidden">
+          <h2>🎙️ Communication & Delivery Analysis</h2>
+          <div id="delivery-score-container"></div>
+          <p id="delivery-feedback-text" style="color: #134e4a; font-weight: 500;"></p>
+
+          <div class="metric-pill-grid" id="delivery-metrics-grid"></div>
+
+          <div id="delivery-transcript-container" class="hidden">
+            <span style="font-size: 0.85rem; font-weight: bold; color: #0f766e;">Whisper Speech-to-Text Transcript:</span>
+            <div class="transcript-box" id="delivery-transcript-text"></div>
+          </div>
+        </div>
       </section>
 
       <!-- Session Completed Summary Report -->
@@ -458,6 +703,10 @@
           <div class="summary-stat">
             <span>Adaptive Follow-Ups</span>
             <strong id="summary-followups-count">0</strong>
+          </div>
+          <div class="summary-stat hidden" id="summary-stat-delivery">
+            <span>Avg Delivery Score</span>
+            <strong id="summary-avg-delivery">0 / 10</strong>
           </div>
         </div>
 
@@ -585,6 +834,33 @@
     const sessionSummaryCard = document.getElementById("session-summary-card");
     const startNewSessionButton = document.getElementById("start-new-session-button");
 
+    // Phase 4 Audio Elements
+    const btnModeText = document.getElementById("btn-mode-text");
+    const btnModeVoice = document.getElementById("btn-mode-voice");
+    const sessionTextInputArea = document.getElementById("session-text-input-area");
+    const sessionVoiceInputArea = document.getElementById("session-voice-input-area");
+    const btnRecordStart = document.getElementById("btn-record-start");
+    const btnRecordStop = document.getElementById("btn-record-stop");
+    const btnSubmitAudio = document.getElementById("btn-submit-audio");
+    const btnRerecord = document.getElementById("btn-rerecord");
+    const recorderIdleControls = document.getElementById("recorder-idle-controls");
+    const recorderLiveControls = document.getElementById("recorder-live-controls");
+    const recorderPreviewControls = document.getElementById("recorder-preview-controls");
+    const recordingTimerDisplay = document.getElementById("recording-timer-display");
+    const sessionAudioPreview = document.getElementById("session-audio-preview");
+    const audioRecordingStatus = document.getElementById("audio-recording-status");
+
+    // Phase 4 Audio Recording State
+    let audioContext = null;
+    let mediaStream = null;
+    let scriptProcessor = null;
+    let audioInputNode = null;
+    let recordedPCMChunks = [];
+    let recordingStartTime = 0;
+    let recordingTimerInterval = null;
+    let recordedWavBlob = null;
+    let currentAnswerMode = "text"; // "text" or "voice"
+
     // Practice Mode Elements
     let currentQuestionId = null;
     const categoryFilter = document.getElementById("category-filter");
@@ -603,6 +879,13 @@
     startSessionButton.addEventListener("click", startSession);
     sessionSubmitButton.addEventListener("click", submitSessionAnswer);
     startNewSessionButton.addEventListener("click", resetSessionView);
+
+    btnModeText.addEventListener("click", () => setAnswerMode("text"));
+    btnModeVoice.addEventListener("click", () => setAnswerMode("voice"));
+    btnRecordStart.addEventListener("click", startAudioRecording);
+    btnRecordStop.addEventListener("click", stopAudioRecording);
+    btnSubmitAudio.addEventListener("click", submitSessionAudioAnswer);
+    btnRerecord.addEventListener("click", resetAudioRecording);
 
     newQuestionButton.addEventListener("click", getRandomQuestion);
     submitAnswerButton.addEventListener("click", submitPracticeAnswer);
@@ -724,6 +1007,22 @@
       }
     }
 
+    function setAnswerMode(mode) {
+      currentAnswerMode = mode;
+      if (mode === "text") {
+        btnModeText.classList.add("active");
+        btnModeVoice.classList.remove("active");
+        sessionTextInputArea.classList.remove("hidden");
+        sessionVoiceInputArea.classList.add("hidden");
+        sessionAnswerInput.focus();
+      } else {
+        btnModeVoice.classList.add("active");
+        btnModeText.classList.remove("active");
+        sessionVoiceInputArea.classList.remove("hidden");
+        sessionTextInputArea.classList.add("hidden");
+      }
+    }
+
     function displaySessionQuestion(questionData) {
       sessionProgressText.innerHTML = `<strong>Session #${activeSessionId}</strong> &middot; Turn ${activeTurnNumber} of ${activeMaxTurns}`;
       
@@ -737,8 +1036,204 @@
 
       sessionQuestionTitle.textContent = questionData.question;
       sessionAnswerInput.value = "";
-      sessionAnswerInput.focus();
+      resetAudioRecording();
+
+      if (currentAnswerMode === "text") {
+        sessionAnswerInput.focus();
+      }
     }
+
+    // -----------------------------------------------------------
+    // Pure Client-Side Audio Recording & WAV Encoding (Phase 4)
+    // -----------------------------------------------------------
+
+    async function startAudioRecording() {
+      audioRecordingStatus.textContent = "";
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        audioContext = new AudioCtx();
+
+        audioInputNode = audioContext.createMediaStreamSource(mediaStream);
+        scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+
+        recordedPCMChunks = [];
+        scriptProcessor.onaudioprocess = (e) => {
+          const channelData = e.inputBuffer.getChannelData(0);
+          recordedPCMChunks.push(new Float32Array(channelData));
+        };
+
+        audioInputNode.connect(scriptProcessor);
+        scriptProcessor.connect(audioContext.destination);
+
+        recorderIdleControls.classList.add("hidden");
+        recorderPreviewControls.classList.add("hidden");
+        recorderLiveControls.classList.remove("hidden");
+
+        recordingStartTime = Date.now();
+        updateRecordingTimer();
+        recordingTimerInterval = setInterval(updateRecordingTimer, 250);
+        audioRecordingStatus.textContent = "Listening... speak clearly into your microphone.";
+      } catch (err) {
+        audioRecordingStatus.textContent = "Microphone access error: " + err.message;
+      }
+    }
+
+    function updateRecordingTimer() {
+      const elapsedSec = Math.floor((Date.now() - recordingStartTime) / 1000);
+      const mins = String(Math.floor(elapsedSec / 60)).padStart(2, "0");
+      const secs = String(elapsedSec % 60).padStart(2, "0");
+      recordingTimerDisplay.textContent = `${mins}:${secs}`;
+    }
+
+    async function stopAudioRecording() {
+      if (recordingTimerInterval) {
+        clearInterval(recordingTimerInterval);
+        recordingTimerInterval = null;
+      }
+
+      if (scriptProcessor) {
+        scriptProcessor.disconnect();
+        scriptProcessor = null;
+      }
+      if (audioInputNode) {
+        audioInputNode.disconnect();
+        audioInputNode = null;
+      }
+      if (mediaStream) {
+        mediaStream.getTracks().forEach((track) => track.stop());
+        mediaStream = null;
+      }
+
+      const inputSampleRate = audioContext ? audioContext.sampleRate : 44100;
+      if (audioContext && audioContext.state !== "closed") {
+        await audioContext.close();
+        audioContext = null;
+      }
+
+      recorderLiveControls.classList.add("hidden");
+
+      let totalLength = 0;
+      for (const chunk of recordedPCMChunks) {
+        totalLength += chunk.length;
+      }
+
+      if (totalLength === 0) {
+        audioRecordingStatus.textContent = "No audio captured. Please try again.";
+        recorderIdleControls.classList.remove("hidden");
+        return;
+      }
+
+      const mergedSamples = new Float32Array(totalLength);
+      let offset = 0;
+      for (const chunk of recordedPCMChunks) {
+        mergedSamples.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      // Downsample to 16,000 Hz if needed
+      const targetSampleRate = 16000;
+      const downsampledSamples = downsampleBuffer(mergedSamples, inputSampleRate, targetSampleRate);
+
+      // Encode standard 16-bit PCM WAV
+      recordedWavBlob = encodeWAV(downsampledSamples, targetSampleRate);
+
+      const audioUrl = URL.createObjectURL(recordedWavBlob);
+      sessionAudioPreview.src = audioUrl;
+
+      recorderPreviewControls.classList.remove("hidden");
+      audioRecordingStatus.textContent = "Recording ready! Click Submit to evaluate spoken answer.";
+    }
+
+    function resetAudioRecording() {
+      if (recordingTimerInterval) {
+        clearInterval(recordingTimerInterval);
+        recordingTimerInterval = null;
+      }
+      if (scriptProcessor) {
+        scriptProcessor.disconnect();
+        scriptProcessor = null;
+      }
+      if (audioInputNode) {
+        audioInputNode.disconnect();
+        audioInputNode = null;
+      }
+      if (mediaStream) {
+        mediaStream.getTracks().forEach((track) => track.stop());
+        mediaStream = null;
+      }
+      if (audioContext && audioContext.state !== "closed") {
+        audioContext.close();
+        audioContext = null;
+      }
+      recordedPCMChunks = [];
+      recordedWavBlob = null;
+      sessionAudioPreview.src = "";
+      recordingTimerDisplay.textContent = "00:00";
+      recorderLiveControls.classList.add("hidden");
+      recorderPreviewControls.classList.add("hidden");
+      recorderIdleControls.classList.remove("hidden");
+      audioRecordingStatus.textContent = "";
+    }
+
+    function downsampleBuffer(buffer, inputRate, outputRate) {
+      if (inputRate === outputRate) return buffer;
+      if (outputRate > inputRate) return buffer;
+      const ratio = inputRate / outputRate;
+      const newLength = Math.round(buffer.length / ratio);
+      const result = new Float32Array(newLength);
+      let offsetResult = 0;
+      let offsetBuffer = 0;
+      while (offsetResult < result.length) {
+        const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
+        let accum = 0, count = 0;
+        for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+          accum += buffer[i];
+          count++;
+        }
+        result[offsetResult] = count > 0 ? accum / count : 0;
+        offsetResult++;
+        offsetBuffer = nextOffsetBuffer;
+      }
+      return result;
+    }
+
+    function encodeWAV(samples, sampleRate) {
+      const buffer = new ArrayBuffer(44 + samples.length * 2);
+      const view = new DataView(buffer);
+
+      function writeString(view, offset, string) {
+        for (let i = 0; i < string.length; i++) {
+          view.setUint8(offset + i, string.charCodeAt(i));
+        }
+      }
+
+      writeString(view, 0, "RIFF");
+      view.setUint32(4, 36 + samples.length * 2, true);
+      writeString(view, 8, "WAVE");
+      writeString(view, 12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true); // PCM format
+      view.setUint16(22, 1, true); // mono
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeString(view, 36, "data");
+      view.setUint32(40, samples.length * 2, true);
+
+      let offset = 44;
+      for (let i = 0; i < samples.length; i++, offset += 2) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      }
+
+      return new Blob([view], { type: "audio/wav" });
+    }
+
+    // -----------------------------------------------------------
+    // Answer Submissions (Text & Voice)
+    // -----------------------------------------------------------
 
     async function submitSessionAnswer() {
       const answer = sessionAnswerInput.value.trim();
@@ -790,11 +1285,67 @@
       }
     }
 
+    async function submitSessionAudioAnswer() {
+      if (!activeSessionId) {
+        setStatus("No active session.", true);
+        return;
+      }
+
+      if (!recordedWavBlob) {
+        setStatus("Please record an audio answer first.", true);
+        return;
+      }
+
+      btnSubmitAudio.disabled = true;
+      btnRerecord.disabled = true;
+      setStatus("Transcribing spoken answer, analyzing delivery, and evaluating...");
+
+      try {
+        const formData = new FormData();
+        formData.append("file", recordedWavBlob, "answer.wav");
+
+        const response = await fetch(`${API_URL}/sessions/${activeSessionId}/answer-audio`, {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "Audio submission failed.");
+        }
+
+        // 1. Render turn evaluation & speech analytics
+        renderSessionEvaluation(data.evaluated_turn);
+
+        // 2. Handle next step decision
+        if (data.decision === "completed") {
+          sessionActiveCard.classList.add("hidden");
+          setStatus("Interview session completed!");
+          await loadSessionSummary(activeSessionId);
+        } else {
+          activeTurnNumber = data.current_turn;
+          displaySessionQuestion(data.next_question);
+          setStatus(
+            data.decision === "follow_up"
+              ? "The interviewer followed up on a missing concept from your answer."
+              : "Advancing to the next interview question."
+          );
+        }
+
+        await getStats();
+      } catch (err) {
+        setStatus(err.message, true);
+      } finally {
+        btnSubmitAudio.disabled = false;
+        btnRerecord.disabled = false;
+      }
+    }
+
     function renderSessionEvaluation(evaluation) {
       sessionEvalCard.classList.remove("hidden");
 
       const scoreEl = document.getElementById("session-eval-score");
-      scoreEl.innerHTML = `<span class="feedback-score-badge">Score: ${evaluation.score} / 10</span>`;
+      scoreEl.innerHTML = `<span class="feedback-score-badge">Technical Score: ${evaluation.score} / 10</span>`;
 
       document.getElementById("session-eval-feedback").textContent = evaluation.feedback;
 
@@ -811,15 +1362,76 @@
       if (evaluation.strengths && evaluation.strengths.length > 0) {
         const strDiv = document.createElement("div");
         strDiv.className = "feedback-section";
-        strDiv.innerHTML = `<h3>Strengths</h3><ul class="feedback-list">${evaluation.strengths.map(s => `<li>${s}</li>`).join("")}</ul>`;
+        strDiv.innerHTML = `<h3>Strengths</h3><ul class="feedback-list">${evaluation.strengths.map((s) => `<li>${s}</li>`).join("")}</ul>`;
         details.appendChild(strDiv);
       }
 
       if (evaluation.missing_points && evaluation.missing_points.length > 0) {
         const missDiv = document.createElement("div");
         missDiv.className = "feedback-section";
-        missDiv.innerHTML = `<h3>Areas for Improvement</h3><ul class="feedback-list">${evaluation.missing_points.map(m => `<li>${m}</li>`).join("")}</ul>`;
+        missDiv.innerHTML = `<h3>Areas for Improvement</h3><ul class="feedback-list">${evaluation.missing_points.map((m) => `<li>${m}</li>`).join("")}</ul>`;
         details.appendChild(missDiv);
+      }
+
+      // Phase 4 Communication & Delivery Card
+      const deliveryCard = document.getElementById("session-delivery-card");
+      if (evaluation.speech_analytics) {
+        const sa = evaluation.speech_analytics;
+        deliveryCard.classList.remove("hidden");
+
+        document.getElementById("delivery-score-container").innerHTML = `
+          <span class="delivery-score-pill">Delivery Score: ${sa.delivery_score} / 10</span>
+        `;
+        document.getElementById("delivery-feedback-text").textContent = sa.delivery_feedback;
+
+        const grid = document.getElementById("delivery-metrics-grid");
+        const speakingPercent = Math.round(sa.phonation_ratio * 100);
+
+        let fillerTagsHtml = "None";
+        if (sa.filler_breakdown && Object.keys(sa.filler_breakdown).length > 0) {
+          fillerTagsHtml = Object.entries(sa.filler_breakdown)
+            .map(([w, c]) => `<span class="filler-tag">${w}: ${c}</span>`)
+            .join(" ");
+        }
+
+        grid.innerHTML = `
+          <div class="metric-pill">
+            <span>Speaking Pace</span>
+            <strong>${sa.speaking_rate_wpm} WPM</strong>
+            <div class="metric-sub">Articulation: ${sa.articulation_rate_wpm} WPM</div>
+          </div>
+          <div class="metric-pill">
+            <span>Speech Duration</span>
+            <strong>${sa.speaking_duration_seconds}s</strong>
+            <div class="metric-sub">Audio: ${sa.audio_duration_seconds}s (${speakingPercent}% voice)</div>
+          </div>
+          <div class="metric-pill">
+            <span>Pauses & Silence</span>
+            <strong>${sa.pause_count} pauses</strong>
+            <div class="metric-sub">Avg ${sa.average_pause_duration}s &middot; ${sa.long_pause_count} long (>1.5s)</div>
+          </div>
+          <div class="metric-pill">
+            <span>Filler Words</span>
+            <strong>${sa.filler_word_count} (${sa.filler_rate}%)</strong>
+            <div class="metric-sub" style="margin-top: 4px;">${fillerTagsHtml}</div>
+          </div>
+          <div class="metric-pill">
+            <span>Repeated Words</span>
+            <strong>${sa.repeated_words_count}</strong>
+            <div class="metric-sub">Hesitation stutters</div>
+          </div>
+        `;
+
+        const transcriptContainer = document.getElementById("delivery-transcript-container");
+        const transcriptTextEl = document.getElementById("delivery-transcript-text");
+        if (evaluation.answer) {
+          transcriptContainer.classList.remove("hidden");
+          transcriptTextEl.textContent = `"${evaluation.answer}"`;
+        } else {
+          transcriptContainer.classList.add("hidden");
+        }
+      } else {
+        deliveryCard.classList.add("hidden");
       }
     }
 
@@ -832,13 +1444,22 @@
         document.getElementById("summary-total-turns").textContent = summary.total_turns_evaluated;
         document.getElementById("summary-followups-count").textContent = summary.follow_up_questions_count;
 
+        // Phase 4 delivery summary stat
+        const delivStat = document.getElementById("summary-stat-delivery");
+        if (summary.speech_summary) {
+          delivStat.classList.remove("hidden");
+          document.getElementById("summary-avg-delivery").textContent = `${summary.speech_summary.average_delivery_score} / 10`;
+        } else {
+          delivStat.classList.add("hidden");
+        }
+
         const tableBody = document.getElementById("summary-table-body");
         tableBody.innerHTML = "";
         (summary.score_breakdown || []).forEach((item) => {
           const row = document.createElement("tr");
           row.innerHTML = `
             <td><strong>#${item.turn_number}</strong></td>
-            <td><span class="badge ${item.is_follow_up ? 'badge-followup' : 'badge-bank'}">${item.is_follow_up ? 'Follow-Up' : 'Bank'}</span></td>
+            <td><span class="badge ${item.is_follow_up ? "badge-followup" : "badge-bank"}">${item.is_follow_up ? "Follow-Up" : "Bank"}</span></td>
             <td>${item.question}</td>
             <td><strong>${item.score} / 10</strong></td>
           `;
@@ -869,6 +1490,7 @@
 
     function resetSessionView() {
       activeSessionId = null;
+      resetAudioRecording();
       sessionActiveCard.classList.add("hidden");
       sessionEvalCard.classList.add("hidden");
       sessionSummaryCard.classList.add("hidden");

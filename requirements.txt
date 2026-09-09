@@ -1,3 +1,5 @@
 fastapi[standard]
 google-genai
 python-dotenv
+numpy
+faster-whisper

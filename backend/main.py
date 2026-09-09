@@ -1,4 +1,18 @@
+import os
+import sys
 import json
+import tempfile
+from pathlib import Path
+
+# Ensure repo root and backend directory are in sys.path so modules can be imported
+# consistently whether launched from repository root or from inside backend/
+BACKEND_DIR = Path(__file__).resolve().parent
+REPO_ROOT = BACKEND_DIR.parent
+
+for _dir in (str(REPO_ROOT), str(BACKEND_DIR)):
+    if _dir not in sys.path:
+        sys.path.insert(0, _dir)
+
 try:
     # Works when started from the repository root: uvicorn backend.main:app
     from .database import create_tables, get_db
@@ -9,7 +23,15 @@ try:
         record_answer_and_advance,
         get_session_summary
     )
-except ImportError:
+    from .speech_engine import transcribe_audio, TranscriptionError, is_stt_available
+    from .audio_analyzer import (
+        parse_wav_samples,
+        analyze_audio_waveform,
+        analyze_transcript_delivery,
+        calculate_delivery_score,
+        process_audio_and_transcript
+    )
+except (ImportError, ValueError):
     # Works when started inside backend: uvicorn main:app
     from database import create_tables, get_db
     from evaluator import evaluate_interview_answer
@@ -19,9 +41,17 @@ except ImportError:
         record_answer_and_advance,
         get_session_summary
     )
+    from speech_engine import transcribe_audio, TranscriptionError, is_stt_available
+    from audio_analyzer import (
+        parse_wav_samples,
+        analyze_audio_waveform,
+        analyze_transcript_delivery,
+        calculate_delivery_score,
+        process_audio_and_transcript
+    )
 from typing import Literal
 from pydantic import BaseModel, Field
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -38,14 +68,14 @@ create_tables()
 @app.get("/")
 def home():
     return {"message": "Hello, FastAPI!"}
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
 
-
 @app.get("/hello/{name}")
 def say_hello(name: str):
-    return {"message": f"Hello, {name}!"}   
+    return {"message": f"Hello, {name}!"}
 
 class InterviewAnswer(BaseModel):
     question_id: int
@@ -649,3 +679,246 @@ def get_session_summary_endpoint(session_id: int):
         raise HTTPException(status_code=404, detail="Session not found")
 
     return summary
+
+
+@app.post("/sessions/{session_id}/answer-audio")
+async def submit_session_audio_answer(
+    session_id: int,
+    file: UploadFile = File(...)
+):
+    """
+    Submits a spoken audio answer (PCM WAV) to the active turn of an interview session.
+    Performs signal processing, speech-to-text, delivery analysis, and technical AI evaluation.
+    """
+    connection = get_db()
+
+    session_row = connection.execute(
+        "SELECT * FROM interview_sessions WHERE id = ?",
+        (session_id,)
+    ).fetchone()
+
+    if session_row is None:
+        connection.close()
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if session_row["status"] != "active":
+        connection.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Interview session is already completed or inactive."
+        )
+
+    pending_turn = connection.execute(
+        """
+        SELECT st.*, q.category AS q_cat, q.difficulty AS q_diff
+        FROM session_turns st
+        LEFT JOIN questions q ON q.id = st.question_id
+        WHERE st.session_id = ? AND st.status = 'pending'
+        ORDER BY st.turn_number ASC LIMIT 1
+        """,
+        (session_id,)
+    ).fetchone()
+
+    if pending_turn is None:
+        connection.close()
+        raise HTTPException(
+            status_code=400,
+            detail="No active question pending an answer in this session."
+        )
+
+    try:
+        audio_bytes = await file.read()
+    except Exception as e:
+        connection.close()
+        raise HTTPException(status_code=400, detail=f"Failed to read audio upload: {e}")
+
+    if not audio_bytes or len(audio_bytes) < 44:
+        connection.close()
+        raise HTTPException(status_code=422, detail="Audio file is empty or corrupted.")
+
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        tmp_path = tmp.name
+        tmp.write(audio_bytes)
+
+    try:
+        # 1. Acoustic waveform signal analysis
+        try:
+            samples, sample_rate = parse_wav_samples(tmp_path)
+            sig_metrics = analyze_audio_waveform(samples, sample_rate)
+        except Exception as e:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Unable to parse audio as PCM WAV: {e}"
+            )
+
+        # 2. Speech-to-Text transcription via faster-whisper
+        try:
+            stt_result = transcribe_audio(tmp_path)
+        except TranscriptionError as e:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Speech transcription engine error: {e}"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unexpected error during transcription: {e}"
+            )
+
+        transcript_text = stt_result.get("text", "").strip()
+
+        if not transcript_text or len(transcript_text.split()) < 2:
+            raise HTTPException(
+                status_code=422,
+                detail="No intelligible speech detected in the audio. Please check your microphone and speak clearly."
+            )
+
+        # 3. Linguistic delivery metrics & deterministic delivery scoring
+        trn_metrics = analyze_transcript_delivery(
+            transcript=transcript_text,
+            audio_duration_seconds=sig_metrics.audio_duration_seconds,
+            speaking_duration_seconds=sig_metrics.speaking_duration_seconds
+        )
+
+        delivery_score, delivery_feedback = calculate_delivery_score(
+            speaking_rate_wpm=trn_metrics.speaking_rate_wpm,
+            filler_rate=trn_metrics.filler_rate,
+            long_pause_count=sig_metrics.long_pause_count,
+            phonation_ratio=sig_metrics.phonation_ratio,
+            repeated_words_count=trn_metrics.repeated_words_count,
+            word_count=trn_metrics.word_count
+        )
+
+        speech_metrics = {
+            "audio_duration_seconds": sig_metrics.audio_duration_seconds,
+            "speaking_duration_seconds": sig_metrics.speaking_duration_seconds,
+            "pause_duration_seconds": sig_metrics.pause_duration_seconds,
+            "pause_count": sig_metrics.pause_count,
+            "average_pause_duration": sig_metrics.average_pause_duration,
+            "long_pause_count": sig_metrics.long_pause_count,
+            "phonation_ratio": sig_metrics.phonation_ratio,
+            "speaking_rate_wpm": trn_metrics.speaking_rate_wpm,
+            "articulation_rate_wpm": trn_metrics.articulation_rate_wpm,
+            "filler_word_count": trn_metrics.filler_word_count,
+            "filler_rate": trn_metrics.filler_rate,
+            "filler_breakdown": trn_metrics.filler_breakdown,
+            "repeated_words_count": trn_metrics.repeated_words_count,
+            "delivery_score": delivery_score,
+            "delivery_feedback": delivery_feedback
+        }
+
+        # 4. Context-aware technical evaluation on the transcript
+        cat = pending_turn["q_cat"] or session_row["category"] or "Technical"
+        diff = pending_turn["q_diff"] or session_row["difficulty"] or "medium"
+
+        evaluation = evaluate_interview_answer(
+            question=pending_turn["question_text"],
+            category=cat,
+            difficulty=diff,
+            answer=transcript_text
+        )
+
+        # 5. Advance session with answer, evaluation, and speech metrics
+        result = record_answer_and_advance(
+            connection=connection,
+            session_id=session_id,
+            answer_text=transcript_text,
+            evaluation=evaluation,
+            speech_metrics=speech_metrics
+        )
+
+        return result
+    finally:
+        connection.close()
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
+
+@app.post("/speech/analyze")
+async def analyze_speech_endpoint(
+    file: UploadFile = File(...),
+    expected_transcript: str | None = Form(default=None)
+):
+    """
+    Standalone endpoint to transcribe audio and compute signal + delivery metrics.
+    Useful for testing, debugging, and independent communication practice.
+    """
+    audio_bytes = await file.read()
+    if not audio_bytes or len(audio_bytes) < 44:
+        raise HTTPException(status_code=422, detail="Audio file is empty or corrupted.")
+
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        tmp_path = tmp.name
+        tmp.write(audio_bytes)
+
+    try:
+        samples, sample_rate = parse_wav_samples(tmp_path)
+        sig = analyze_audio_waveform(samples, sample_rate)
+
+        if expected_transcript and expected_transcript.strip():
+            transcript = expected_transcript.strip()
+            stt_data = {"text": transcript, "method": "provided"}
+        else:
+            try:
+                stt_data = transcribe_audio(tmp_path)
+                transcript = stt_data.get("text", "").strip()
+            except TranscriptionError as e:
+                raise HTTPException(status_code=503, detail=str(e))
+
+        trn = analyze_transcript_delivery(
+            transcript,
+            audio_duration_seconds=sig.audio_duration_seconds,
+            speaking_duration_seconds=sig.speaking_duration_seconds
+        )
+
+        score, feedback = calculate_delivery_score(
+            speaking_rate_wpm=trn.speaking_rate_wpm,
+            filler_rate=trn.filler_rate,
+            long_pause_count=sig.long_pause_count,
+            phonation_ratio=sig.phonation_ratio,
+            repeated_words_count=trn.repeated_words_count,
+            word_count=trn.word_count
+        )
+
+        return {
+            "transcript": transcript,
+            "stt_info": stt_data,
+            "acoustic_signal": {
+                "audio_duration_seconds": sig.audio_duration_seconds,
+                "speaking_duration_seconds": sig.speaking_duration_seconds,
+                "pause_duration_seconds": sig.pause_duration_seconds,
+                "pause_count": sig.pause_count,
+                "average_pause_duration": sig.average_pause_duration,
+                "long_pause_count": sig.long_pause_count,
+                "phonation_ratio": sig.phonation_ratio
+            },
+            "transcript_delivery": {
+                "word_count": trn.word_count,
+                "speaking_rate_wpm": trn.speaking_rate_wpm,
+                "articulation_rate_wpm": trn.articulation_rate_wpm,
+                "filler_word_count": trn.filler_word_count,
+                "filler_rate": trn.filler_rate,
+                "filler_breakdown": trn.filler_breakdown,
+                "repeated_words_count": trn.repeated_words_count
+            },
+            "delivery_score": score,
+            "delivery_feedback": feedback
+        }
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
+
+@app.get("/speech/status")
+def get_speech_engine_status():
+    return {
+        "stt_available": is_stt_available(),
+        "engine": "faster-whisper",
+        "model": os.getenv("WHISPER_MODEL_SIZE", "base.en")
+    }

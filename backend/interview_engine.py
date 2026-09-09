@@ -237,6 +237,41 @@ def get_session_details(connection, session_id: int) -> dict:
                 "missing_points": json.loads(r["missing_points"]) if r["missing_points"] else []
             }
 
+            sa_row = connection.execute(
+                """
+                SELECT audio_duration_seconds, speaking_duration_seconds,
+                       pause_duration_seconds, pause_count, average_pause_duration,
+                       long_pause_count, phonation_ratio, speaking_rate_wpm,
+                       articulation_rate_wpm, filler_word_count, filler_rate,
+                       filler_breakdown, repeated_words_count, delivery_score,
+                       delivery_feedback
+                FROM speech_analytics
+                WHERE answer_id = ?
+                """,
+                (r["answer_id"],)
+            ).fetchone()
+
+            if sa_row is not None:
+                turn_data["speech_analytics"] = {
+                    "audio_duration_seconds": sa_row["audio_duration_seconds"],
+                    "speaking_duration_seconds": sa_row["speaking_duration_seconds"],
+                    "pause_duration_seconds": sa_row["pause_duration_seconds"],
+                    "pause_count": sa_row["pause_count"],
+                    "average_pause_duration": sa_row["average_pause_duration"],
+                    "long_pause_count": sa_row["long_pause_count"],
+                    "phonation_ratio": sa_row["phonation_ratio"],
+                    "speaking_rate_wpm": sa_row["speaking_rate_wpm"],
+                    "articulation_rate_wpm": sa_row["articulation_rate_wpm"],
+                    "filler_word_count": sa_row["filler_word_count"],
+                    "filler_rate": sa_row["filler_rate"],
+                    "filler_breakdown": json.loads(sa_row["filler_breakdown"]) if sa_row["filler_breakdown"] else {},
+                    "repeated_words_count": sa_row["repeated_words_count"],
+                    "delivery_score": sa_row["delivery_score"],
+                    "delivery_feedback": sa_row["delivery_feedback"]
+                }
+            else:
+                turn_data["speech_analytics"] = None
+
         turns.append(turn_data)
 
     return {
@@ -257,7 +292,8 @@ def record_answer_and_advance(
     connection,
     session_id: int,
     answer_text: str,
-    evaluation
+    evaluation,
+    speech_metrics: dict | None = None
 ) -> dict:
     """
     Records the candidate's answer for the active turn, persists the evaluation,
@@ -314,6 +350,41 @@ def record_answer_and_advance(
         )
     )
 
+    # 3b. Persist speech analytics if audio answer was provided
+    if speech_metrics is not None:
+        filler_json = json.dumps(speech_metrics.get("filler_breakdown", {}))
+        connection.execute(
+            """
+            INSERT INTO speech_analytics (
+                answer_id, audio_duration_seconds, speaking_duration_seconds,
+                pause_duration_seconds, pause_count, average_pause_duration,
+                long_pause_count, phonation_ratio, speaking_rate_wpm,
+                articulation_rate_wpm, filler_word_count, filler_rate,
+                filler_breakdown, repeated_words_count, delivery_score,
+                delivery_feedback
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                answer_id,
+                speech_metrics.get("audio_duration_seconds", 0.0),
+                speech_metrics.get("speaking_duration_seconds", 0.0),
+                speech_metrics.get("pause_duration_seconds", 0.0),
+                speech_metrics.get("pause_count", 0),
+                speech_metrics.get("average_pause_duration", 0.0),
+                speech_metrics.get("long_pause_count", 0),
+                speech_metrics.get("phonation_ratio", 0.0),
+                speech_metrics.get("speaking_rate_wpm", 0.0),
+                speech_metrics.get("articulation_rate_wpm", 0.0),
+                speech_metrics.get("filler_word_count", 0),
+                speech_metrics.get("filler_rate", 0.0),
+                filler_json,
+                speech_metrics.get("repeated_words_count", 0),
+                speech_metrics.get("delivery_score", 10),
+                speech_metrics.get("delivery_feedback", "")
+            )
+        )
+
     # 4. Mark pending turn as evaluated
     connection.execute(
         """
@@ -340,7 +411,8 @@ def record_answer_and_advance(
         "technical_accuracy": evaluation.technical_accuracy,
         "strengths": evaluation.strengths,
         "missing_points": evaluation.missing_points,
-        "evaluator": getattr(evaluation, "evaluator", "ai-evaluator")
+        "evaluator": getattr(evaluation, "evaluator", "ai-evaluator"),
+        "speech_analytics": speech_metrics
     }
 
     # 5. Check if session reached max turns (Modification 2)
@@ -553,6 +625,34 @@ def get_session_summary(connection, session_id: int) -> dict:
     else:
         recommendation = "Needs improvement. Review the core concepts highlighted in the feedback below and practice explaining technical mechanisms."
 
+    # Check if speech analytics exist for turns in this session
+    sa_rows = connection.execute(
+        """
+        SELECT sa.*
+        FROM speech_analytics sa
+        JOIN session_turns st ON st.answer_id = sa.answer_id
+        WHERE st.session_id = ?
+        """,
+        (session_id,)
+    ).fetchall()
+
+    speech_summary = None
+    if sa_rows:
+        deliv_scores = [r["delivery_score"] for r in sa_rows]
+        avg_deliv = round(sum(deliv_scores) / len(deliv_scores), 1)
+        tot_speaking = round(sum(r["speaking_duration_seconds"] for r in sa_rows), 1)
+        tot_audio = round(sum(r["audio_duration_seconds"] for r in sa_rows), 1)
+        avg_wpm = round(sum(r["speaking_rate_wpm"] for r in sa_rows) / len(sa_rows), 1)
+        tot_fillers = sum(r["filler_word_count"] for r in sa_rows)
+        speech_summary = {
+            "turns_with_audio": len(sa_rows),
+            "average_delivery_score": avg_deliv,
+            "total_speaking_duration_seconds": tot_speaking,
+            "total_audio_duration_seconds": tot_audio,
+            "average_speaking_rate_wpm": avg_wpm,
+            "total_filler_words": tot_fillers
+        }
+
     return {
         "session_id": session_id,
         "status": session["status"],
@@ -560,6 +660,7 @@ def get_session_summary(connection, session_id: int) -> dict:
         "bank_questions_count": bank_count,
         "follow_up_questions_count": follow_up_count,
         "average_score": avg_score,
+        "speech_summary": speech_summary,
         "score_breakdown": [
             {
                 "turn_number": r["turn_number"],
