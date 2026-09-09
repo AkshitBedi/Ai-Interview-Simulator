@@ -375,6 +375,103 @@
       margin-bottom: 12px;
     }
 
+    /* Phase 5 Video Recording & Nonverbal Telemetry Styles */
+    .video-recorder-panel {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      background: #f8fafc;
+      margin-top: 10px;
+    }
+
+    .camera-preview-wrapper {
+      position: relative;
+      width: 480px;
+      max-width: 100%;
+      height: 360px;
+      margin: 0 auto 16px auto;
+      background: #0f172a;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .camera-preview-wrapper video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .camera-overlay-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .camera-status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 480px;
+      margin: 0 auto 12px auto;
+      font-size: 0.85rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .camera-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 500;
+      background: #e2e8f0;
+    }
+
+    .camera-badge.ok {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .nonverbal-card {
+      background: #f5f3ff;
+      border-color: #ddd6fe;
+      margin-top: 16px;
+    }
+
+    .nonverbal-card h2 {
+      color: #6d28d9;
+    }
+
+    .nonverbal-score-pill {
+      display: inline-block;
+      padding: 6px 14px;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 9999px;
+      background: #7c3aed;
+      color: white;
+      margin-bottom: 12px;
+    }
+
+    .quality-alert-box {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-top: 10px;
+      text-align: left;
+    }
+
     .metric-pill-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -603,7 +700,8 @@
         <!-- Answer Mode Switcher -->
         <div class="answer-mode-toggle" role="group" aria-label="Answer Mode">
           <button type="button" class="mode-pill active" id="btn-mode-text">💬 Type Answer</button>
-          <button type="button" class="mode-pill" id="btn-mode-voice">🎙️ Voice Answer (Microphone)</button>
+          <button type="button" class="mode-pill" id="btn-mode-voice">🎙️ Voice Only</button>
+          <button type="button" class="mode-pill" id="btn-mode-video">📹 Video + Voice (Optional)</button>
         </div>
 
         <!-- Text Answer Area -->
@@ -662,6 +760,53 @@
             <p id="audio-recording-status" style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0;"></p>
           </div>
         </div>
+
+        <!-- Phase 5: Video + Voice Answer Area -->
+        <div id="session-video-input-area" class="hidden">
+          <div class="video-recorder-panel">
+            <div class="camera-status-bar">
+              <span id="camera-presence-indicator" class="camera-badge">📷 Camera Inactive</span>
+              <span id="camera-framing-guide-text">Align face within the framing guide</span>
+            </div>
+
+            <div class="camera-preview-wrapper" id="camera-preview-box">
+              <video id="camera-live-video" autoplay playsinline muted></video>
+              <canvas id="camera-overlay-canvas" class="camera-overlay-canvas" width="480" height="360"></canvas>
+            </div>
+
+            <div id="video-recorder-idle-controls">
+              <button type="button" id="btn-video-record-start" class="recorder-btn btn-record">
+                🔴 Start Video Recording
+              </button>
+            </div>
+
+            <div id="video-recorder-live-controls" class="hidden">
+              <div class="recording-live">
+                <div class="recording-dot"></div>
+                <span class="recording-timer" id="video-recording-timer-display">00:00</span>
+              </div>
+              <button type="button" id="btn-video-record-stop" class="recorder-btn btn-stop">
+                ⏹️ Stop Recording
+              </button>
+            </div>
+
+            <div id="video-recorder-preview-controls" class="hidden">
+              <div class="audio-preview-container">
+                <video id="session-video-playback" controls playsinline style="max-width: 480px; width: 100%; border-radius: 8px;"></video>
+                <div class="button-row" style="margin-top: 10px;">
+                  <button type="button" id="btn-submit-video" class="recorder-btn" style="background: var(--blue);">
+                    🚀 Submit Video Answer & Advance
+                  </button>
+                  <button type="button" id="btn-rerecord-video" class="recorder-btn" style="background: #94a3b8;">
+                    🔄 Discard & Retake
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p id="video-recording-status" style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0;"></p>
+          </div>
+        </div>
       </section>
 
       <!-- Turn Evaluation Display -->
@@ -683,6 +828,17 @@
             <span style="font-size: 0.85rem; font-weight: bold; color: #0f766e;">Whisper Speech-to-Text Transcript:</span>
             <div class="transcript-box" id="delivery-transcript-text"></div>
           </div>
+        </div>
+
+        <!-- Phase 5 Nonverbal Telemetry Card -->
+        <div id="session-nonverbal-card" class="card nonverbal-card hidden">
+          <h2>📹 Nonverbal Telemetry & Physical Presence</h2>
+          <div id="nonverbal-score-container"></div>
+          <p id="nonverbal-feedback-text" style="color: #4c1d95; font-weight: 500;"></p>
+
+          <div class="metric-pill-grid" id="nonverbal-metrics-grid"></div>
+
+          <div id="nonverbal-quality-box" class="quality-alert-box hidden"></div>
         </div>
       </section>
 
@@ -707,6 +863,10 @@
           <div class="summary-stat hidden" id="summary-stat-delivery">
             <span>Avg Delivery Score</span>
             <strong id="summary-avg-delivery">0 / 10</strong>
+          </div>
+          <div class="summary-stat hidden" id="summary-stat-nonverbal">
+            <span>Avg Nonverbal Score</span>
+            <strong id="summary-avg-nonverbal">0 / 10</strong>
           </div>
         </div>
 
@@ -837,8 +997,11 @@
     // Phase 4 Audio Elements
     const btnModeText = document.getElementById("btn-mode-text");
     const btnModeVoice = document.getElementById("btn-mode-voice");
+    const btnModeVideo = document.getElementById("btn-mode-video");
     const sessionTextInputArea = document.getElementById("session-text-input-area");
     const sessionVoiceInputArea = document.getElementById("session-voice-input-area");
+    const sessionVideoInputArea = document.getElementById("session-video-input-area");
+
     const btnRecordStart = document.getElementById("btn-record-start");
     const btnRecordStop = document.getElementById("btn-record-stop");
     const btnSubmitAudio = document.getElementById("btn-submit-audio");
@@ -850,6 +1013,28 @@
     const sessionAudioPreview = document.getElementById("session-audio-preview");
     const audioRecordingStatus = document.getElementById("audio-recording-status");
 
+    // Phase 5 Video Elements
+    const cameraLiveVideo = document.getElementById("camera-live-video");
+    const cameraOverlayCanvas = document.getElementById("camera-overlay-canvas");
+    const cameraPresenceIndicator = document.getElementById("camera-presence-indicator");
+    const btnVideoRecordStart = document.getElementById("btn-video-record-start");
+    const btnVideoRecordStop = document.getElementById("btn-video-record-stop");
+    const btnSubmitVideo = document.getElementById("btn-submit-video");
+    const btnRerecordVideo = document.getElementById("btn-rerecord-video");
+    const videoRecorderIdleControls = document.getElementById("video-recorder-idle-controls");
+    const videoRecorderLiveControls = document.getElementById("video-recorder-live-controls");
+    const videoRecorderPreviewControls = document.getElementById("video-recorder-preview-controls");
+    const videoRecordingTimerDisplay = document.getElementById("video-recording-timer-display");
+    const sessionVideoPlayback = document.getElementById("session-video-playback");
+    const videoRecordingStatus = document.getElementById("video-recording-status");
+
+    // Phase 5 Nonverbal Feedback Elements
+    const sessionNonverbalCard = document.getElementById("session-nonverbal-card");
+    const nonverbalScoreContainer = document.getElementById("nonverbal-score-container");
+    const nonverbalFeedbackText = document.getElementById("nonverbal-feedback-text");
+    const nonverbalMetricsGrid = document.getElementById("nonverbal-metrics-grid");
+    const nonverbalQualityBox = document.getElementById("nonverbal-quality-box");
+
     // Phase 4 Audio Recording State
     let audioContext = null;
     let mediaStream = null;
@@ -859,7 +1044,15 @@
     let recordingStartTime = 0;
     let recordingTimerInterval = null;
     let recordedWavBlob = null;
-    let currentAnswerMode = "text"; // "text" or "voice"
+    let currentAnswerMode = "text"; // "text", "voice", or "video"
+
+    // Phase 5 Video Recording State
+    let videoStream = null;
+    let videoMediaRecorder = null;
+    let recordedVideoChunks = [];
+    let recordedVideoBlob = null;
+    let videoRecordingStartTime = 0;
+    let videoRecordingTimerInterval = null;
 
     // Practice Mode Elements
     let currentQuestionId = null;
@@ -882,10 +1075,17 @@
 
     btnModeText.addEventListener("click", () => setAnswerMode("text"));
     btnModeVoice.addEventListener("click", () => setAnswerMode("voice"));
+    btnModeVideo.addEventListener("click", () => setAnswerMode("video"));
+
     btnRecordStart.addEventListener("click", startAudioRecording);
     btnRecordStop.addEventListener("click", stopAudioRecording);
     btnSubmitAudio.addEventListener("click", submitSessionAudioAnswer);
     btnRerecord.addEventListener("click", resetAudioRecording);
+
+    btnVideoRecordStart.addEventListener("click", startVideoRecording);
+    btnVideoRecordStop.addEventListener("click", stopVideoRecording);
+    btnSubmitVideo.addEventListener("click", submitSessionMultimodalAnswer);
+    btnRerecordVideo.addEventListener("click", resetVideoRecording);
 
     newQuestionButton.addEventListener("click", getRandomQuestion);
     submitAnswerButton.addEventListener("click", submitPracticeAnswer);
@@ -1009,17 +1209,27 @@
 
     function setAnswerMode(mode) {
       currentAnswerMode = mode;
+      btnModeText.classList.toggle("active", mode === "text");
+      btnModeVoice.classList.toggle("active", mode === "voice");
+      btnModeVideo.classList.toggle("active", mode === "video");
+
+      sessionTextInputArea.classList.toggle("hidden", mode !== "text");
+      sessionVoiceInputArea.classList.toggle("hidden", mode !== "voice");
+      sessionVideoInputArea.classList.toggle("hidden", mode !== "video");
+
       if (mode === "text") {
-        btnModeText.classList.add("active");
-        btnModeVoice.classList.remove("active");
-        sessionTextInputArea.classList.remove("hidden");
-        sessionVoiceInputArea.classList.add("hidden");
+        stopCameraPreview();
+        resetAudioRecording();
+        resetVideoRecording();
         sessionAnswerInput.focus();
-      } else {
-        btnModeVoice.classList.add("active");
-        btnModeText.classList.remove("active");
-        sessionVoiceInputArea.classList.remove("hidden");
-        sessionTextInputArea.classList.add("hidden");
+      } else if (mode === "voice") {
+        stopCameraPreview();
+        resetAudioRecording();
+        resetVideoRecording();
+      } else if (mode === "video") {
+        resetAudioRecording();
+        resetVideoRecording();
+        initCameraPreview();
       }
     }
 
@@ -1037,9 +1247,12 @@
       sessionQuestionTitle.textContent = questionData.question;
       sessionAnswerInput.value = "";
       resetAudioRecording();
+      resetVideoRecording();
 
       if (currentAnswerMode === "text") {
         sessionAnswerInput.focus();
+      } else if (currentAnswerMode === "video") {
+        initCameraPreview();
       }
     }
 
@@ -1232,7 +1445,289 @@
     }
 
     // -----------------------------------------------------------
-    // Answer Submissions (Text & Voice)
+    // Phase 5: Client-Side Video Capture & Framing Overlay
+    // -----------------------------------------------------------
+
+    function drawFramingGuide() {
+      if (!cameraOverlayCanvas) return;
+      const ctx = cameraOverlayCanvas.getContext("2d");
+      const w = cameraOverlayCanvas.width;
+      const h = cameraOverlayCanvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Draw subtle framing oval
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.ellipse(w * 0.5, h * 0.45, w * 0.22, h * 0.32, 0, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      // Eye-level guide line
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(w * 0.32, h * 0.38);
+      ctx.lineTo(w * 0.68, h * 0.38);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    async function initCameraPreview() {
+      if (videoStream && videoStream.active) {
+        drawFramingGuide();
+        return;
+      }
+
+      videoRecordingStatus.textContent = "";
+      try {
+        videoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            frameRate: { ideal: 10, max: 15 }
+          },
+          audio: true
+        });
+
+        cameraLiveVideo.srcObject = videoStream;
+        cameraPresenceIndicator.textContent = "📷 Camera Ready";
+        cameraPresenceIndicator.classList.add("ok");
+        drawFramingGuide();
+      } catch (err) {
+        cameraPresenceIndicator.textContent = "⚠️ Camera Denied";
+        cameraPresenceIndicator.classList.remove("ok");
+        videoRecordingStatus.textContent = "Camera access error: " + err.message + ". You can switch to Voice or Text mode.";
+      }
+    }
+
+    function stopCameraPreview() {
+      if (videoStream) {
+        videoStream.getTracks().forEach((t) => t.stop());
+        videoStream = null;
+      }
+      if (cameraLiveVideo) {
+        cameraLiveVideo.srcObject = null;
+      }
+      if (cameraPresenceIndicator) {
+        cameraPresenceIndicator.textContent = "📷 Camera Inactive";
+        cameraPresenceIndicator.classList.remove("ok");
+      }
+    }
+
+    async function startVideoRecording() {
+      videoRecordingStatus.textContent = "";
+      try {
+        if (!videoStream || !videoStream.active) {
+          await initCameraPreview();
+        }
+
+        if (!videoStream) {
+          throw new Error("Unable to access camera and microphone.");
+        }
+
+        // 1. Setup MediaRecorder for video WebM
+        let mimeType = "video/webm;codecs=vp8,opus";
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = "video/webm";
+        }
+
+        recordedVideoChunks = [];
+        videoMediaRecorder = new MediaRecorder(videoStream, { mimeType });
+        videoMediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            recordedVideoChunks.push(e.data);
+          }
+        };
+
+        // 2. Concurrently setup Web Audio API for 16kHz mono WAV extraction
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        audioContext = new AudioCtx();
+        audioInputNode = audioContext.createMediaStreamSource(videoStream);
+        scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+
+        recordedPCMChunks = [];
+        scriptProcessor.onaudioprocess = (e) => {
+          const channelData = e.inputBuffer.getChannelData(0);
+          recordedPCMChunks.push(new Float32Array(channelData));
+        };
+
+        audioInputNode.connect(scriptProcessor);
+        scriptProcessor.connect(audioContext.destination);
+
+        // 3. Start Recording
+        videoMediaRecorder.start(250);
+
+        videoRecorderIdleControls.classList.add("hidden");
+        videoRecorderPreviewControls.classList.add("hidden");
+        videoRecorderLiveControls.classList.remove("hidden");
+
+        videoRecordingStartTime = Date.now();
+        updateVideoRecordingTimer();
+        videoRecordingTimerInterval = setInterval(updateVideoRecordingTimer, 250);
+        videoRecordingStatus.textContent = "Recording video & audio... maintain forward gaze and speak clearly.";
+      } catch (err) {
+        videoRecordingStatus.textContent = "Recording error: " + err.message;
+      }
+    }
+
+    function updateVideoRecordingTimer() {
+      const elapsedSec = Math.floor((Date.now() - videoRecordingStartTime) / 1000);
+      const mins = String(Math.floor(elapsedSec / 60)).padStart(2, "0");
+      const secs = String(elapsedSec % 60).padStart(2, "0");
+      videoRecordingTimerDisplay.textContent = `${mins}:${secs}`;
+    }
+
+    async function stopVideoRecording() {
+      if (videoRecordingTimerInterval) {
+        clearInterval(videoRecordingTimerInterval);
+        videoRecordingTimerInterval = null;
+      }
+
+      // Stop Audio Processor
+      if (scriptProcessor) {
+        scriptProcessor.disconnect();
+        scriptProcessor = null;
+      }
+      if (audioInputNode) {
+        audioInputNode.disconnect();
+        audioInputNode = null;
+      }
+
+      const inputSampleRate = audioContext ? audioContext.sampleRate : 44100;
+      if (audioContext && audioContext.state !== "closed") {
+        await audioContext.close();
+        audioContext = null;
+      }
+
+      // Stop MediaRecorder
+      if (videoMediaRecorder && videoMediaRecorder.state !== "inactive") {
+        videoMediaRecorder.onstop = () => {
+          recordedVideoBlob = new Blob(recordedVideoChunks, { type: "video/webm" });
+          const videoUrl = URL.createObjectURL(recordedVideoBlob);
+          sessionVideoPlayback.src = videoUrl;
+          videoRecorderPreviewControls.classList.remove("hidden");
+          videoRecordingStatus.textContent = "Video response ready! Click Submit to evaluate.";
+        };
+        videoMediaRecorder.stop();
+      }
+
+      videoRecorderLiveControls.classList.add("hidden");
+
+      // Encode standard 16kHz mono WAV from audio PCM chunks
+      let totalLength = 0;
+      for (const chunk of recordedPCMChunks) {
+        totalLength += chunk.length;
+      }
+      if (totalLength > 0) {
+        const mergedSamples = new Float32Array(totalLength);
+        let offset = 0;
+        for (const chunk of recordedPCMChunks) {
+          mergedSamples.set(chunk, offset);
+          offset += chunk.length;
+        }
+        const targetSampleRate = 16000;
+        const downsampledSamples = downsampleBuffer(mergedSamples, inputSampleRate, targetSampleRate);
+        recordedWavBlob = encodeWAV(downsampledSamples, targetSampleRate);
+      }
+    }
+
+    function resetVideoRecording() {
+      if (videoRecordingTimerInterval) {
+        clearInterval(videoRecordingTimerInterval);
+        videoRecordingTimerInterval = null;
+      }
+      if (videoMediaRecorder && videoMediaRecorder.state !== "inactive") {
+        try { videoMediaRecorder.stop(); } catch {}
+      }
+      recordedVideoChunks = [];
+      recordedVideoBlob = null;
+      recordedPCMChunks = [];
+      recordedWavBlob = null;
+      if (sessionVideoPlayback) {
+        sessionVideoPlayback.src = "";
+      }
+      if (videoRecordingTimerDisplay) {
+        videoRecordingTimerDisplay.textContent = "00:00";
+      }
+      if (videoRecorderLiveControls) {
+        videoRecorderLiveControls.classList.add("hidden");
+      }
+      if (videoRecorderPreviewControls) {
+        videoRecorderPreviewControls.classList.add("hidden");
+      }
+      if (videoRecorderIdleControls) {
+        videoRecorderIdleControls.classList.remove("hidden");
+      }
+      if (videoRecordingStatus) {
+        videoRecordingStatus.textContent = "";
+      }
+    }
+
+    async function submitSessionMultimodalAnswer() {
+      if (!activeSessionId) {
+        setStatus("No active session.", true);
+        return;
+      }
+
+      if (!recordedVideoBlob || !recordedWavBlob) {
+        setStatus("Please record a video answer first.", true);
+        return;
+      }
+
+      btnSubmitVideo.disabled = true;
+      btnRerecordVideo.disabled = true;
+      setStatus("Analyzing video telemetry, transcribing audio, and evaluating...");
+
+      try {
+        const formData = new FormData();
+        formData.append("audio_file", recordedWavBlob, "answer.wav");
+        formData.append("video_file", recordedVideoBlob, "answer.webm");
+
+        const response = await fetch(`${API_URL}/sessions/${activeSessionId}/answer-multimodal`, {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "Multimodal submission failed.");
+        }
+
+        // 1. Render turn evaluation, delivery analytics & nonverbal telemetry
+        renderSessionEvaluation(data.evaluated_turn);
+
+        // 2. Handle next step decision
+        if (data.decision === "completed") {
+          sessionActiveCard.classList.add("hidden");
+          stopCameraPreview();
+          setStatus("Interview session completed!");
+          await loadSessionSummary(activeSessionId);
+        } else {
+          activeTurnNumber = data.current_turn;
+          displaySessionQuestion(data.next_question);
+          setStatus(
+            data.decision === "follow_up"
+              ? "The interviewer followed up on a missing concept from your answer."
+              : "Advancing to the next interview question."
+          );
+        }
+
+        await getStats();
+      } catch (err) {
+        setStatus(err.message, true);
+      } finally {
+        btnSubmitVideo.disabled = false;
+        btnRerecordVideo.disabled = false;
+      }
+    }
+
+    // -----------------------------------------------------------
+    // Answer Submissions (Text, Voice, Video)
     // -----------------------------------------------------------
 
     async function submitSessionAnswer() {
@@ -1433,6 +1928,76 @@
       } else {
         deliveryCard.classList.add("hidden");
       }
+
+      // Phase 5 Nonverbal Telemetry Card
+      if (evaluation.nonverbal_analytics) {
+        const nv = evaluation.nonverbal_analytics;
+        sessionNonverbalCard.classList.remove("hidden");
+
+        nonverbalScoreContainer.innerHTML = `
+          <span class="nonverbal-score-pill">Nonverbal Telemetry Score: ${nv.nonverbal_telemetry_score} / 10</span>
+        `;
+        nonverbalFeedbackText.textContent = nv.nonverbal_feedback;
+
+        const presencePct = Math.round(nv.face_detected_ratio * 100);
+        const gazeDisplay = (nv.gaze_deviation_ratio !== null && nv.gaze_deviation_ratio !== undefined)
+          ? `${Math.round((1.0 - nv.gaze_deviation_ratio) * 100)}% forward`
+          : "N/A (Fallback)";
+        const stabilityDisplay = (nv.yaw_variance !== null && nv.pitch_variance !== null && nv.roll_variance !== null &&
+                                  nv.yaw_variance !== undefined && nv.pitch_variance !== undefined && nv.roll_variance !== undefined)
+          ? `${(nv.yaw_variance + nv.pitch_variance + nv.roll_variance).toFixed(1)} deg^2`
+          : "N/A (Fallback)";
+        const motionFreqDisplay = (nv.head_motion_frequency_hz !== null && nv.head_motion_frequency_hz !== undefined)
+          ? `${nv.head_motion_frequency_hz} Hz`
+          : "N/A (Fallback)";
+
+        nonverbalMetricsGrid.innerHTML = `
+          <div class="metric-pill">
+            <span>Face Presence</span>
+            <strong>${presencePct}%</strong>
+            <div class="metric-sub">${nv.frames_analyzed} frames analyzed</div>
+          </div>
+          <div class="metric-pill">
+            <span>Framing Offset</span>
+            <strong>${Number(nv.centering_offset).toFixed(2)}</strong>
+            <div class="metric-sub">Dist from optimal center</div>
+          </div>
+          <div class="metric-pill">
+            <span>Gaze Orientation</span>
+            <strong>${gazeDisplay}</strong>
+            <div class="metric-sub">Camera lens contact</div>
+          </div>
+          <div class="metric-pill">
+            <span>Head Stability</span>
+            <strong>${stabilityDisplay}</strong>
+            <div class="metric-sub">Angular orientation variance</div>
+          </div>
+          <div class="metric-pill">
+            <span>Motion Frequency</span>
+            <strong>${motionFreqDisplay}</strong>
+            <div class="metric-sub">Orientation transitions</div>
+          </div>
+          <div class="metric-pill">
+            <span>Motion Energy</span>
+            <strong>${Number(nv.motion_energy).toFixed(1)}</strong>
+            <div class="metric-sub">Torso/frame stillness</div>
+          </div>
+          <div class="metric-pill">
+            <span>Vision Engine</span>
+            <strong style="font-size: 0.95rem; text-transform: uppercase;">${nv.vision_backend}</strong>
+            <div class="metric-sub">Active pipeline</div>
+          </div>
+        `;
+
+        if (nv.camera_quality_flags && nv.camera_quality_flags.length > 0) {
+          nonverbalQualityBox.classList.remove("hidden");
+          nonverbalQualityBox.innerHTML = `<strong>Camera Quality Notice:</strong> ${nv.camera_quality_flags.join(", ")}. <em>(Informational only &middot; does not affect technical score).</em>`;
+        } else {
+          nonverbalQualityBox.classList.add("hidden");
+        }
+      } else {
+        sessionNonverbalCard.classList.add("hidden");
+      }
     }
 
     async function loadSessionSummary(sessionId) {
@@ -1451,6 +2016,15 @@
           document.getElementById("summary-avg-delivery").textContent = `${summary.speech_summary.average_delivery_score} / 10`;
         } else {
           delivStat.classList.add("hidden");
+        }
+
+        // Phase 5 nonverbal summary stat
+        const nvStat = document.getElementById("summary-stat-nonverbal");
+        if (summary.nonverbal_summary) {
+          nvStat.classList.remove("hidden");
+          document.getElementById("summary-avg-nonverbal").textContent = `${summary.nonverbal_summary.average_nonverbal_score} / 10`;
+        } else {
+          nvStat.classList.add("hidden");
         }
 
         const tableBody = document.getElementById("summary-table-body");
@@ -1490,7 +2064,9 @@
 
     function resetSessionView() {
       activeSessionId = null;
+      stopCameraPreview();
       resetAudioRecording();
+      resetVideoRecording();
       sessionActiveCard.classList.add("hidden");
       sessionEvalCard.classList.add("hidden");
       sessionSummaryCard.classList.add("hidden");

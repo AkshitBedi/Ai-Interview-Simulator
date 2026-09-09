@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -31,6 +32,11 @@ try:
         calculate_delivery_score,
         process_audio_and_transcript
     )
+    from .vision_analyzer import (
+        process_video,
+        get_vision_status,
+        VisionProcessingError
+    )
 except (ImportError, ValueError):
     # Works when started inside backend: uvicorn main:app
     from database import create_tables, get_db
@@ -48,6 +54,11 @@ except (ImportError, ValueError):
         analyze_transcript_delivery,
         calculate_delivery_score,
         process_audio_and_transcript
+    )
+    from vision_analyzer import (
+        process_video,
+        get_vision_status,
+        VisionProcessingError
     )
 from typing import Literal
 from pydantic import BaseModel, Field
@@ -922,3 +933,231 @@ def get_speech_engine_status():
         "engine": "faster-whisper",
         "model": os.getenv("WHISPER_MODEL_SIZE", "base.en")
     }
+
+
+# ===========================================================================
+# Phase 5: Multimodal (Video + Voice) Endpoints
+# ===========================================================================
+
+@app.post("/sessions/{session_id}/answer-multimodal")
+async def submit_session_multimodal_answer(
+    session_id: int,
+    audio_file: UploadFile = File(...),
+    video_file: UploadFile = File(...)
+):
+    """
+    Submits a multimodal answer (16kHz PCM WAV audio + WebM/MP4 video) to the active turn.
+    Executes independent audio signal processing, speech transcription, computer vision telemetry,
+    and technical AI evaluation. Guarantees raw media cleanup in a per-request temporary directory.
+    """
+    connection = get_db()
+
+    session_row = connection.execute(
+        "SELECT * FROM interview_sessions WHERE id = ?",
+        (session_id,)
+    ).fetchone()
+
+    if session_row is None:
+        connection.close()
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if session_row["status"] != "active":
+        connection.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Interview session is already completed or inactive."
+        )
+
+    pending_turn = connection.execute(
+        """
+        SELECT st.*, q.category AS q_cat, q.difficulty AS q_diff
+        FROM session_turns st
+        LEFT JOIN questions q ON q.id = st.question_id
+        WHERE st.session_id = ? AND st.status = 'pending'
+        ORDER BY st.turn_number ASC LIMIT 1
+        """,
+        (session_id,)
+    ).fetchone()
+
+    if pending_turn is None:
+        connection.close()
+        raise HTTPException(
+            status_code=400,
+            detail="No active question pending an answer in this session."
+        )
+
+    # Read uploaded media bytes
+    try:
+        audio_bytes = await audio_file.read()
+    except Exception as e:
+        connection.close()
+        raise HTTPException(status_code=400, detail=f"Failed to read audio upload: {e}")
+
+    try:
+        video_bytes = await video_file.read()
+    except Exception as e:
+        connection.close()
+        raise HTTPException(status_code=400, detail=f"Failed to read video upload: {e}")
+
+    if not audio_bytes or len(audio_bytes) < 44:
+        connection.close()
+        raise HTTPException(status_code=422, detail="Audio file is empty or corrupted.")
+
+    if not video_bytes or len(video_bytes) < 100:
+        connection.close()
+        raise HTTPException(status_code=422, detail="Video file is empty or corrupted.")
+
+    # Create isolated per-request directory with guaranteed cleanup
+    temp_dir = tempfile.mkdtemp(prefix="interview_multimodal_")
+    audio_path = os.path.join(temp_dir, "audio.wav")
+    video_path = os.path.join(temp_dir, "video.webm")
+
+    with open(audio_path, "wb") as f_a:
+        f_a.write(audio_bytes)
+
+    with open(video_path, "wb") as f_v:
+        f_v.write(video_bytes)
+
+    try:
+        # 1. Acoustic waveform signal analysis
+        try:
+            samples, sample_rate = parse_wav_samples(audio_path)
+            sig_metrics = analyze_audio_waveform(samples, sample_rate)
+        except Exception as e:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Unable to parse audio as PCM WAV: {e}"
+            )
+
+        # 2. Speech-to-Text transcription via faster-whisper
+        try:
+            stt_result = transcribe_audio(audio_path)
+        except TranscriptionError as e:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Speech transcription engine error: {e}"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unexpected error during transcription: {e}"
+            )
+
+        transcript_text = stt_result.get("text", "").strip()
+
+        if not transcript_text or len(transcript_text.split()) < 2:
+            raise HTTPException(
+                status_code=422,
+                detail="No intelligible speech detected in the audio. Please check your microphone and speak clearly."
+            )
+
+        # 3. Linguistic delivery metrics & deterministic delivery scoring
+        trn_metrics = analyze_transcript_delivery(
+            transcript=transcript_text,
+            audio_duration_seconds=sig_metrics.audio_duration_seconds,
+            speaking_duration_seconds=sig_metrics.speaking_duration_seconds
+        )
+
+        delivery_score, delivery_feedback = calculate_delivery_score(
+            speaking_rate_wpm=trn_metrics.speaking_rate_wpm,
+            filler_rate=trn_metrics.filler_rate,
+            long_pause_count=sig_metrics.long_pause_count,
+            phonation_ratio=sig_metrics.phonation_ratio,
+            repeated_words_count=trn_metrics.repeated_words_count,
+            word_count=trn_metrics.word_count
+        )
+
+        speech_metrics = {
+            "audio_duration_seconds": sig_metrics.audio_duration_seconds,
+            "speaking_duration_seconds": sig_metrics.speaking_duration_seconds,
+            "pause_duration_seconds": sig_metrics.pause_duration_seconds,
+            "pause_count": sig_metrics.pause_count,
+            "average_pause_duration": sig_metrics.average_pause_duration,
+            "long_pause_count": sig_metrics.long_pause_count,
+            "phonation_ratio": sig_metrics.phonation_ratio,
+            "speaking_rate_wpm": trn_metrics.speaking_rate_wpm,
+            "articulation_rate_wpm": trn_metrics.articulation_rate_wpm,
+            "filler_word_count": trn_metrics.filler_word_count,
+            "filler_rate": trn_metrics.filler_rate,
+            "filler_breakdown": trn_metrics.filler_breakdown,
+            "repeated_words_count": trn_metrics.repeated_words_count,
+            "delivery_score": delivery_score,
+            "delivery_feedback": delivery_feedback
+        }
+
+        # 4. Computer vision & nonverbal telemetry analysis
+        try:
+            nv_result = process_video(video_path)
+            nonverbal_metrics = nv_result.to_dict()
+        except VisionProcessingError as e:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Unable to process video frames: {e}"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unexpected error during video analysis: {e}"
+            )
+
+        # 5. Technical AI evaluation on transcript text
+        cat = pending_turn["q_cat"] or session_row["category"] or "Technical"
+        diff = pending_turn["q_diff"] or session_row["difficulty"] or "medium"
+
+        evaluation = evaluate_interview_answer(
+            question=pending_turn["question_text"],
+            category=cat,
+            difficulty=diff,
+            answer=transcript_text
+        )
+
+        # 6. Advance session with evaluation, speech, and nonverbal metrics
+        result = record_answer_and_advance(
+            connection=connection,
+            session_id=session_id,
+            answer_text=transcript_text,
+            evaluation=evaluation,
+            speech_metrics=speech_metrics,
+            nonverbal_metrics=nonverbal_metrics
+        )
+
+        return result
+    finally:
+        connection.close()
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@app.post("/vision/analyze")
+async def analyze_vision_endpoint(video_file: UploadFile = File(...)):
+    """
+    Standalone diagnostic endpoint to analyze nonverbal telemetry from an uploaded video clip.
+    """
+    video_bytes = await video_file.read()
+    if not video_bytes or len(video_bytes) < 100:
+        raise HTTPException(status_code=422, detail="Video file is empty or corrupted.")
+
+    with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
+        tmp_path = tmp.name
+        tmp.write(video_bytes)
+
+    try:
+        res = process_video(tmp_path)
+        return res.to_dict()
+    except VisionProcessingError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error during vision analysis: {e}")
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
+
+@app.get("/vision/status")
+def get_vision_engine_status():
+    """
+    Returns the current computer vision backend status, capabilities, and health.
+    """
+    return get_vision_status()

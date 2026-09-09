@@ -233,6 +233,37 @@ def create_tables():
         "CREATE INDEX IF NOT EXISTS idx_speech_analytics_answer_id ON speech_analytics(answer_id)"
     )
 
+    # Phase 5: Nonverbal Telemetry and Computer Vision Analytics
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS nonverbal_analytics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            answer_id INTEGER NOT NULL UNIQUE,
+            video_duration_seconds REAL NOT NULL,
+            frames_analyzed INTEGER NOT NULL,
+            face_detected_ratio REAL NOT NULL,
+            centering_offset REAL NOT NULL,
+            gaze_deviation_ratio REAL,
+            avg_yaw_degrees REAL,
+            avg_pitch_degrees REAL,
+            avg_roll_degrees REAL,
+            yaw_variance REAL,
+            pitch_variance REAL,
+            roll_variance REAL,
+            head_motion_frequency_hz REAL,
+            motion_energy REAL NOT NULL,
+            camera_quality_flags TEXT,
+            nonverbal_telemetry_score INTEGER NOT NULL,
+            nonverbal_feedback TEXT NOT NULL,
+            vision_backend TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (answer_id) REFERENCES answers(id) ON DELETE CASCADE
+        )
+    """)
+
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_nonverbal_analytics_answer_id ON nonverbal_analytics(answer_id)"
+    )
+
     # Seed baseline question bank if empty or placeholder only
     seed_count = connection.execute(
         "SELECT COUNT(*) FROM questions WHERE question != 'stringstri'"

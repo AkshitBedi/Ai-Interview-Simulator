@@ -272,6 +272,43 @@ def get_session_details(connection, session_id: int) -> dict:
             else:
                 turn_data["speech_analytics"] = None
 
+            nv_row = connection.execute(
+                """
+                SELECT video_duration_seconds, frames_analyzed, face_detected_ratio,
+                       centering_offset, gaze_deviation_ratio, avg_yaw_degrees,
+                       avg_pitch_degrees, avg_roll_degrees, yaw_variance,
+                       pitch_variance, roll_variance, head_motion_frequency_hz,
+                       motion_energy, camera_quality_flags, nonverbal_telemetry_score,
+                       nonverbal_feedback, vision_backend
+                FROM nonverbal_analytics
+                WHERE answer_id = ?
+                """,
+                (r["answer_id"],)
+            ).fetchone()
+
+            if nv_row is not None:
+                turn_data["nonverbal_analytics"] = {
+                    "video_duration_seconds": nv_row["video_duration_seconds"],
+                    "frames_analyzed": nv_row["frames_analyzed"],
+                    "face_detected_ratio": nv_row["face_detected_ratio"],
+                    "centering_offset": nv_row["centering_offset"],
+                    "gaze_deviation_ratio": nv_row["gaze_deviation_ratio"],
+                    "avg_yaw_degrees": nv_row["avg_yaw_degrees"],
+                    "avg_pitch_degrees": nv_row["avg_pitch_degrees"],
+                    "avg_roll_degrees": nv_row["avg_roll_degrees"],
+                    "yaw_variance": nv_row["yaw_variance"],
+                    "pitch_variance": nv_row["pitch_variance"],
+                    "roll_variance": nv_row["roll_variance"],
+                    "head_motion_frequency_hz": nv_row["head_motion_frequency_hz"],
+                    "motion_energy": nv_row["motion_energy"],
+                    "camera_quality_flags": json.loads(nv_row["camera_quality_flags"]) if nv_row["camera_quality_flags"] else [],
+                    "nonverbal_telemetry_score": nv_row["nonverbal_telemetry_score"],
+                    "nonverbal_feedback": nv_row["nonverbal_feedback"],
+                    "vision_backend": nv_row["vision_backend"]
+                }
+            else:
+                turn_data["nonverbal_analytics"] = None
+
         turns.append(turn_data)
 
     return {
@@ -293,7 +330,8 @@ def record_answer_and_advance(
     session_id: int,
     answer_text: str,
     evaluation,
-    speech_metrics: dict | None = None
+    speech_metrics: dict | None = None,
+    nonverbal_metrics: dict | None = None
 ) -> dict:
     """
     Records the candidate's answer for the active turn, persists the evaluation,
@@ -385,6 +423,43 @@ def record_answer_and_advance(
             )
         )
 
+    # 3c. Persist nonverbal analytics if video telemetry was provided
+    if nonverbal_metrics is not None:
+        quality_flags_json = json.dumps(nonverbal_metrics.get("camera_quality_flags", []))
+        connection.execute(
+            """
+            INSERT INTO nonverbal_analytics (
+                answer_id, video_duration_seconds, frames_analyzed,
+                face_detected_ratio, centering_offset, gaze_deviation_ratio,
+                avg_yaw_degrees, avg_pitch_degrees, avg_roll_degrees,
+                yaw_variance, pitch_variance, roll_variance,
+                head_motion_frequency_hz, motion_energy, camera_quality_flags,
+                nonverbal_telemetry_score, nonverbal_feedback, vision_backend
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                answer_id,
+                nonverbal_metrics.get("video_duration_seconds", 0.0),
+                nonverbal_metrics.get("frames_analyzed", 0),
+                nonverbal_metrics.get("face_detected_ratio", 0.0),
+                nonverbal_metrics.get("centering_offset", 0.0),
+                nonverbal_metrics.get("gaze_deviation_ratio"),
+                nonverbal_metrics.get("avg_yaw_degrees"),
+                nonverbal_metrics.get("avg_pitch_degrees"),
+                nonverbal_metrics.get("avg_roll_degrees"),
+                nonverbal_metrics.get("yaw_variance"),
+                nonverbal_metrics.get("pitch_variance"),
+                nonverbal_metrics.get("roll_variance"),
+                nonverbal_metrics.get("head_motion_frequency_hz"),
+                nonverbal_metrics.get("motion_energy", 0.0),
+                quality_flags_json,
+                nonverbal_metrics.get("nonverbal_telemetry_score", 10),
+                nonverbal_metrics.get("nonverbal_feedback", ""),
+                nonverbal_metrics.get("vision_backend", "mediapipe")
+            )
+        )
+
     # 4. Mark pending turn as evaluated
     connection.execute(
         """
@@ -412,7 +487,8 @@ def record_answer_and_advance(
         "strengths": evaluation.strengths,
         "missing_points": evaluation.missing_points,
         "evaluator": getattr(evaluation, "evaluator", "ai-evaluator"),
-        "speech_analytics": speech_metrics
+        "speech_analytics": speech_metrics,
+        "nonverbal_analytics": nonverbal_metrics
     }
 
     # 5. Check if session reached max turns (Modification 2)
@@ -653,6 +729,46 @@ def get_session_summary(connection, session_id: int) -> dict:
             "total_filler_words": tot_fillers
         }
 
+    # Check if nonverbal analytics exist for turns in this session
+    nv_rows = connection.execute(
+        """
+        SELECT nv.*
+        FROM nonverbal_analytics nv
+        JOIN session_turns st ON st.answer_id = nv.answer_id
+        WHERE st.session_id = ?
+        """,
+        (session_id,)
+    ).fetchall()
+
+    nonverbal_summary = None
+    if nv_rows:
+        nv_scores = [r["nonverbal_telemetry_score"] for r in nv_rows]
+        avg_nv_score = round(sum(nv_scores) / len(nv_scores), 1)
+
+        gaze_vals = [r["gaze_deviation_ratio"] for r in nv_rows if r["gaze_deviation_ratio"] is not None]
+        avg_gaze = round(sum(gaze_vals) / len(gaze_vals), 2) if gaze_vals else None
+
+        motion_vals = [r["head_motion_frequency_hz"] for r in nv_rows if r["head_motion_frequency_hz"] is not None]
+        avg_motion_freq = round(sum(motion_vals) / len(motion_vals), 2) if motion_vals else None
+
+        flags_count = 0
+        for r in nv_rows:
+            if r["camera_quality_flags"]:
+                try:
+                    fl = json.loads(r["camera_quality_flags"])
+                    if fl:
+                        flags_count += 1
+                except Exception:
+                    pass
+
+        nonverbal_summary = {
+            "turns_with_video": len(nv_rows),
+            "average_nonverbal_score": avg_nv_score,
+            "average_gaze_deviation_ratio": avg_gaze,
+            "average_head_motion_frequency_hz": avg_motion_freq,
+            "turns_with_camera_quality_flags": flags_count
+        }
+
     return {
         "session_id": session_id,
         "status": session["status"],
@@ -661,6 +777,7 @@ def get_session_summary(connection, session_id: int) -> dict:
         "follow_up_questions_count": follow_up_count,
         "average_score": avg_score,
         "speech_summary": speech_summary,
+        "nonverbal_summary": nonverbal_summary,
         "score_breakdown": [
             {
                 "turn_number": r["turn_number"],

@@ -3,3 +3,6 @@ google-genai
 python-dotenv
 numpy
 faster-whisper
+opencv-python
+mediapipe
+av
