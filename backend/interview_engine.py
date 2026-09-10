@@ -181,7 +181,7 @@ def start_session(
     }
 
 
-def get_session_details(connection, session_id: int) -> dict:
+def get_session_details(connection, session_id: int) -> dict | None:
     """
     Retrieves the full session state, active question, and turn history.
     """
@@ -639,7 +639,7 @@ def record_answer_and_advance(
             }
 
 
-def get_session_summary(connection, session_id: int) -> dict:
+def get_session_summary(connection, session_id: int) -> dict | None:
     """
     Computes aggregate analytics and an overall review for a completed or active session.
     """
