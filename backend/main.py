@@ -38,6 +38,12 @@ try:
         VisionProcessingError
     )
     from .analytics import get_analytics_overview, get_analytics_history
+    from .coaching import (
+        build_coaching_signals,
+        generate_coaching_report,
+        SessionNotFoundError,
+        IncompleteSessionError
+    )
 except (ImportError, ValueError):
     # Works when started inside backend: uvicorn main:app
     from database import create_tables, get_db
@@ -62,6 +68,12 @@ except (ImportError, ValueError):
         VisionProcessingError
     )
     from analytics import get_analytics_overview, get_analytics_history
+    from coaching import (
+        build_coaching_signals,
+        generate_coaching_report,
+        SessionNotFoundError,
+        IncompleteSessionError
+    )
 from typing import Literal
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form
@@ -695,6 +707,42 @@ def get_session_summary_endpoint(session_id: int):
         raise HTTPException(status_code=404, detail="Session not found")
 
     return summary
+
+
+@app.get("/sessions/{session_id}/coaching")
+def get_session_coaching_endpoint(session_id: int):
+    """
+    Phase 9: Advanced Performance Coaching for completed sessions.
+    Returns deterministic signals + Gemini coaching explanation (or deterministic fallback).
+    """
+    connection = get_db()
+    try:
+        signals = build_coaching_signals(connection, session_id)
+    except SessionNotFoundError as e:
+        connection.close()
+        raise HTTPException(status_code=404, detail=str(e))
+    except IncompleteSessionError as e:
+        connection.close()
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        connection.close()
+        raise HTTPException(status_code=500, detail=f"Error analyzing coaching signals: {str(e)}")
+
+    connection.close()
+
+    try:
+        report, source = generate_coaching_report(signals)
+    except Exception:
+        from .coaching import generate_fallback_coaching_report
+        report = generate_fallback_coaching_report(signals)
+        source = "deterministic"
+
+    return {
+        "session_id": session_id,
+        "report": report,
+        "signals": signals,
+        "source": source
+    }
 
 
 @app.post("/sessions/{session_id}/answer-audio")

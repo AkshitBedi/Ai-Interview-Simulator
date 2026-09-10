@@ -1311,6 +1311,56 @@
           <ul id="summary-improvements-list" class="feedback-list"></ul>
         </div>
 
+        <!-- Phase 9: Advanced Performance Coaching Section -->
+        <div id="session-coaching-container" class="feedback-section" style="background: #f8fafc; border: 2px solid #3b82f6; border-radius: 10px; padding: 20px; margin: 24px 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+            <h3 style="margin: 0; font-size: 1.25rem; color: #1e3a5f;">🎯 Performance Coaching</h3>
+            <span id="coaching-source-badge" class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.75rem;">AI Coach</span>
+          </div>
+
+          <div id="coaching-error-notice" class="hidden" style="color: var(--muted); font-style: italic; padding: 8px 0;">
+            Coaching report unavailable.
+          </div>
+
+          <div id="coaching-content-block">
+            <!-- 1. Overall Assessment -->
+            <div style="margin-bottom: 18px;">
+              <h4 style="margin: 0 0 6px 0; color: var(--text); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Overall Assessment</h4>
+              <p id="coaching-overall-summary" style="margin: 0; line-height: 1.5; color: #334155; font-size: 0.95rem;"></p>
+            </div>
+
+            <!-- 2. Top Priorities -->
+            <div style="margin-bottom: 18px;">
+              <h4 style="margin: 0 0 8px 0; color: #b91c1c; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Top Priorities</h4>
+              <div id="coaching-priorities-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+            </div>
+
+            <!-- 3. What You Did Well -->
+            <div style="margin-bottom: 18px;">
+              <h4 style="margin: 0 0 8px 0; color: #15803d; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">What You Did Well</h4>
+              <div id="coaching-strengths-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+
+            <!-- 4. Communication Coaching -->
+            <div id="coaching-communication-block" class="hidden" style="margin-bottom: 18px;">
+              <h4 style="margin: 0 0 8px 0; color: #0f766e; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Communication Coaching</h4>
+              <div id="coaching-communication-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+
+            <!-- 5. Nonverbal Observations -->
+            <div id="coaching-nonverbal-block" class="hidden" style="margin-bottom: 18px;">
+              <h4 style="margin: 0 0 8px 0; color: #6d28d9; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Nonverbal Observations</h4>
+              <div id="coaching-nonverbal-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+
+            <!-- 6. Practice Plan -->
+            <div style="margin-bottom: 8px;">
+              <h4 style="margin: 0 0 8px 0; color: #2563eb; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Practice Plan</h4>
+              <div id="coaching-practice-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="button-row">
           <button type="button" id="start-new-session-button">
             Start Another Interview
@@ -2741,9 +2791,171 @@
         });
 
         sessionSummaryCard.classList.remove("hidden");
+
+        // Load Phase 9 Performance Coaching asynchronously (non-blocking)
+        loadCoachingReport(sessionId);
       } catch (err) {
         setStatus(err.message, true);
       }
+    }
+
+    async function loadCoachingReport(sessionId) {
+      const container = document.getElementById("session-coaching-container");
+      const errNotice = document.getElementById("coaching-error-notice");
+      const contentBlock = document.getElementById("coaching-content-block");
+      if (!container) return;
+
+      errNotice.classList.add("hidden");
+      contentBlock.classList.remove("hidden");
+
+      try {
+        const resp = await fetchApi(`/sessions/${sessionId}/coaching`);
+        if (!resp || !resp.report) {
+          throw new Error("No report returned");
+        }
+
+        const report = resp.report;
+        const sourceBadge = document.getElementById("coaching-source-badge");
+        if (sourceBadge) {
+          sourceBadge.textContent = resp.source === "ai" ? "AI Coach" : "Deterministic Coach";
+          sourceBadge.style.background = resp.source === "ai" ? "#eff6ff" : "#f1f5f9";
+          sourceBadge.style.color = resp.source === "ai" ? "#1d4ed8" : "#475569";
+        }
+
+        // 1. Overall Summary
+        const summaryElem = document.getElementById("coaching-overall-summary");
+        if (summaryElem) {
+          summaryElem.textContent = report.overall_summary || "";
+        }
+
+        // 2. Top Priorities
+        const prioList = document.getElementById("coaching-priorities-list");
+        if (prioList) {
+          prioList.innerHTML = "";
+          (report.priority_improvements || []).forEach((p, idx) => {
+            const card = document.createElement("div");
+            card.style.background = "#ffffff";
+            card.style.border = "1px solid #fecaca";
+            card.style.borderLeft = "4px solid #ef4444";
+            card.style.borderRadius = "6px";
+            card.style.padding = "10px 14px";
+            card.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                <strong style="color: #991b1b; font-size: 0.95rem;">${idx + 1}. ${escapeHtml(p.area)}</strong>
+                <span style="font-size: 0.75rem; color: #7f1d1d; background: #fee2e2; padding: 2px 6px; border-radius: 4px;">Priority</span>
+              </div>
+              <div style="font-size: 0.85rem; color: #475569; margin-bottom: 4px;"><strong>Evidence:</strong> ${escapeHtml(p.evidence)}</div>
+              <div style="font-size: 0.85rem; color: #334155; margin-bottom: 4px;"><strong>Why it matters:</strong> ${escapeHtml(p.why_it_matters)}</div>
+              <div style="font-size: 0.85rem; color: #1e293b; margin-bottom: 4px;"><strong>Action:</strong> ${escapeHtml(p.action)}</div>
+              <div style="font-size: 0.85rem; color: #2563eb;"><strong>Practice target:</strong> ${escapeHtml(p.practice_target)}</div>
+            `;
+            prioList.appendChild(card);
+          });
+        }
+
+        // 3. What You Did Well
+        const strList = document.getElementById("coaching-strengths-list");
+        if (strList) {
+          strList.innerHTML = "";
+          (report.strengths || []).forEach((s) => {
+            const card = document.createElement("div");
+            card.style.background = "#ffffff";
+            card.style.border = "1px solid #bbf7d0";
+            card.style.borderLeft = "4px solid #22c55e";
+            card.style.borderRadius = "6px";
+            card.style.padding = "10px 14px";
+            card.innerHTML = `
+              <div style="font-weight: bold; color: #166534; margin-bottom: 3px;">${escapeHtml(s.area)}</div>
+              <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;"><strong>Evidence:</strong> ${escapeHtml(s.evidence)}</div>
+              <div style="font-size: 0.85rem; color: #15803d;"><strong>Advice:</strong> ${escapeHtml(s.advice)}</div>
+            `;
+            strList.appendChild(card);
+          });
+        }
+
+        // 4. Communication Coaching
+        const commBlock = document.getElementById("coaching-communication-block");
+        const commList = document.getElementById("coaching-communication-list");
+        if (commBlock && commList) {
+          if (report.communication_coaching && report.communication_coaching.length > 0) {
+            commBlock.classList.remove("hidden");
+            commList.innerHTML = "";
+            report.communication_coaching.forEach((c) => {
+              const card = document.createElement("div");
+              card.style.background = "#ffffff";
+              card.style.border = "1px solid #ccfbf1";
+              card.style.borderLeft = "4px solid #14b8a6";
+              card.style.borderRadius = "6px";
+              card.style.padding = "10px 14px";
+              card.innerHTML = `
+                <div style="font-weight: bold; color: #0f766e; margin-bottom: 3px;">${escapeHtml(c.issue)}</div>
+                <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;"><strong>Evidence:</strong> ${escapeHtml(c.evidence)}</div>
+                <div style="font-size: 0.85rem; color: #0f766e;"><strong>Action:</strong> ${escapeHtml(c.action)}</div>
+              `;
+              commList.appendChild(card);
+            });
+          } else {
+            commBlock.classList.add("hidden");
+          }
+        }
+
+        // 5. Nonverbal Observations
+        const nvBlock = document.getElementById("coaching-nonverbal-block");
+        const nvList = document.getElementById("coaching-nonverbal-list");
+        if (nvBlock && nvList) {
+          if (report.nonverbal_coaching && report.nonverbal_coaching.length > 0) {
+            nvBlock.classList.remove("hidden");
+            nvList.innerHTML = "";
+            report.nonverbal_coaching.forEach((nv) => {
+              const card = document.createElement("div");
+              card.style.background = "#ffffff";
+              card.style.border = "1px solid #ddd6fe";
+              card.style.borderLeft = "4px solid #8b5cf6";
+              card.style.borderRadius = "6px";
+              card.style.padding = "10px 14px";
+              card.innerHTML = `
+                <div style="font-weight: bold; color: #6d28d9; margin-bottom: 3px;">${escapeHtml(nv.issue)}</div>
+                <div style="font-size: 0.85rem; color: #475569; margin-bottom: 3px;"><strong>Evidence:</strong> ${escapeHtml(nv.evidence)}</div>
+                <div style="font-size: 0.85rem; color: #5b21b6;"><strong>Action:</strong> ${escapeHtml(nv.action)}</div>
+              `;
+              nvList.appendChild(card);
+            });
+          } else {
+            nvBlock.classList.add("hidden");
+          }
+        }
+
+        // 6. Practice Plan
+        const planList = document.getElementById("coaching-practice-list");
+        if (planList) {
+          planList.innerHTML = "";
+          (report.practice_plan || []).forEach((item) => {
+            const card = document.createElement("div");
+            card.style.background = "#ffffff";
+            card.style.border = "1px solid #bfdbfe";
+            card.style.borderRadius = "6px";
+            card.style.padding = "10px 12px";
+            card.innerHTML = `
+              <div style="font-size: 0.75rem; text-transform: uppercase; color: #2563eb; font-weight: bold; margin-bottom: 2px;">${escapeHtml(item.category)}</div>
+              <div style="font-weight: 600; color: #1e293b; font-size: 0.9rem; margin-bottom: 6px;">${escapeHtml(item.focus)}</div>
+              <div style="font-size: 0.8rem; color: #64748b;">Target: <strong style="color: #0f172a;">${Number(item.recommended_count)} questions</strong></div>
+            `;
+            planList.appendChild(card);
+          });
+        }
+
+      } catch (err) {
+        // Non-blocking: show fallback notice
+        errNotice.classList.remove("hidden");
+        contentBlock.classList.add("hidden");
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
     }
 
     function resetSessionView() {
