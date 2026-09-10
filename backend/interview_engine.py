@@ -14,12 +14,19 @@ try:
 except ImportError:
     pass
 
+try:
+    from . import strategy_engine
+except (ImportError, ValueError):
+    import strategy_engine
+
 
 def select_next_bank_question(connection, session_id: int, category: str | None = None, difficulty: str | None = None):
     """
     Selects a bank question that has NOT already been asked in this session.
-    Prioritizes the session's category and difficulty if available.
+    Prioritizes the session's category and difficulty deterministically.
     """
+    norm_diff = strategy_engine.normalize_difficulty(difficulty) if difficulty else None
+
     base_query = """
         SELECT id, category, difficulty, question
         FROM questions
@@ -30,39 +37,62 @@ def select_next_bank_question(connection, session_id: int, category: str | None 
     """
 
     # 1. Try matching both category and difficulty
-    if category and difficulty:
-        row = connection.execute(
-            base_query + " AND category = ? AND difficulty = ? ORDER BY RANDOM() LIMIT 1",
-            (session_id, category, difficulty)
-        ).fetchone()
+    if category and norm_diff:
+        if norm_diff == "easy":
+            diff_clause = "AND category = ? AND difficulty IN ('easy', 'beginner')"
+            row = connection.execute(
+                base_query + f" {diff_clause} ORDER BY id ASC LIMIT 1",
+                (session_id, category)
+            ).fetchone()
+        else:
+            row = connection.execute(
+                base_query + " AND category = ? AND difficulty = ? ORDER BY id ASC LIMIT 1",
+                (session_id, category, norm_diff)
+            ).fetchone()
         if row:
-            return dict(row)
+            res = dict(row)
+            res["difficulty"] = strategy_engine.normalize_difficulty(res["difficulty"])
+            return res
 
     # 2. Try matching category
     if category:
         row = connection.execute(
-            base_query + " AND category = ? ORDER BY RANDOM() LIMIT 1",
+            base_query + " AND category = ? ORDER BY id ASC LIMIT 1",
             (session_id, category)
         ).fetchone()
         if row:
-            return dict(row)
+            res = dict(row)
+            res["difficulty"] = strategy_engine.normalize_difficulty(res["difficulty"])
+            return res
 
     # 3. Try matching difficulty
-    if difficulty:
-        row = connection.execute(
-            base_query + " AND difficulty = ? ORDER BY RANDOM() LIMIT 1",
-            (session_id, difficulty)
-        ).fetchone()
+    if norm_diff:
+        if norm_diff == "easy":
+            row = connection.execute(
+                base_query + " AND difficulty IN ('easy', 'beginner') ORDER BY id ASC LIMIT 1",
+                (session_id,)
+            ).fetchone()
+        else:
+            row = connection.execute(
+                base_query + " AND difficulty = ? ORDER BY id ASC LIMIT 1",
+                (session_id, norm_diff)
+            ).fetchone()
         if row:
-            return dict(row)
+            res = dict(row)
+            res["difficulty"] = strategy_engine.normalize_difficulty(res["difficulty"])
+            return res
 
-    # 4. Fallback: Any unasked question
+    # 4. Fallback: Any unasked question (deterministic lowest id)
     row = connection.execute(
-        base_query + " ORDER BY RANDOM() LIMIT 1",
+        base_query + " ORDER BY id ASC LIMIT 1",
         (session_id,)
     ).fetchone()
 
-    return dict(row) if row else None
+    if row:
+        res = dict(row)
+        res["difficulty"] = strategy_engine.normalize_difficulty(res["difficulty"])
+        return res
+    return None
 
 
 def generate_follow_up_question(
@@ -135,21 +165,25 @@ def start_session(
     max_turns: int = 5
 ) -> dict:
     """
-    Initializes a new interview session and selects the first question.
+    Initializes a new interview session and selects the first question deterministically via strategy_engine.
     """
+    canonical_diff = strategy_engine.normalize_difficulty(difficulty) if difficulty else None
+
     cursor = connection.execute(
         """
         INSERT INTO interview_sessions (category, difficulty, max_turns, status, current_turn)
         VALUES (?, ?, ?, 'active', 1)
         """,
-        (category, difficulty, max_turns)
+        (category, canonical_diff, max_turns)
     )
     session_id = cursor.lastrowid
 
-    # Select first bank question
-    first_q = select_next_bank_question(connection, session_id, category, difficulty)
-    if not first_q:
+    # Select first bank question via deterministic strategy engine
+    decision = strategy_engine.decide_next_turn(connection, session_id)
+    if decision.get("action") != "new_bank_question" or not decision.get("question"):
         raise ValueError("No questions available to start the interview session.")
+
+    first_q = decision["question"]
 
     # Create Turn 1
     turn_cursor = connection.execute(
@@ -532,7 +566,7 @@ def record_answer_and_advance(
     if should_ask_follow_up:
         # Determine category and difficulty for context
         cat = session_row["category"] or "Technical"
-        diff = session_row["difficulty"] or "medium"
+        diff = strategy_engine.normalize_difficulty(session_row["difficulty"])
 
         follow_up_text = generate_follow_up_question(
             original_question=pending_turn["question_text"],
@@ -575,15 +609,11 @@ def record_answer_and_advance(
             }
         }
     else:
-        # Move to a new bank question (excluding previously asked questions)
-        next_bank_q = select_next_bank_question(
-            connection,
-            session_id,
-            category=session_row["category"],
-            difficulty=session_row["difficulty"]
-        )
+        # Move to deterministic strategy engine decision
+        strategy_decision = strategy_engine.decide_next_turn(connection, session_id)
 
-        if next_bank_q:
+        if strategy_decision.get("action") == "new_bank_question" and strategy_decision.get("question"):
+            next_bank_q = strategy_decision["question"]
             turn_cursor = connection.execute(
                 """
                 INSERT INTO session_turns (session_id, turn_number, question_id, question_text, is_follow_up, status)
@@ -606,6 +636,7 @@ def record_answer_and_advance(
                 "max_turns": max_turns,
                 "evaluated_turn": evaluated_summary,
                 "decision": "new_question",
+                "strategy": strategy_decision,
                 "next_question": {
                     "turn_id": turn_cursor.lastrowid,
                     "turn_number": next_turn_num,
@@ -617,7 +648,7 @@ def record_answer_and_advance(
                 }
             }
         else:
-            # Bank exhausted
+            # Action is "bank_exhausted" or "completed"
             connection.execute(
                 """
                 UPDATE interview_sessions
@@ -635,6 +666,7 @@ def record_answer_and_advance(
                 "max_turns": max_turns,
                 "evaluated_turn": evaluated_summary,
                 "decision": "completed",
+                "strategy": strategy_decision,
                 "next_question": None
             }
 
@@ -665,11 +697,22 @@ def get_session_summary(connection, session_id: int) -> dict | None:
     ).fetchall()
 
     if not evaluated_turns:
+        state = strategy_engine.build_interview_state(connection, session_id)
         return {
             "session_id": session_id,
             "status": session["status"],
             "total_turns": 0,
             "average_score": 0.0,
+            "categories_covered": state["categories_covered"],
+            "coverage_target": state["coverage_target"],
+            "difficulty_progression": {},
+            "adaptive_summary": {
+                "categories_covered": state["categories_covered"],
+                "coverage_target": state["coverage_target"],
+                "adaptive_follow_ups": 0,
+                "difficulty_progression": {},
+                "category_breakdown": []
+            },
             "message": "No evaluated turns in this session yet."
         }
 
@@ -700,6 +743,34 @@ def get_session_summary(connection, session_id: int) -> dict | None:
         recommendation = "Solid performance. You grasp the fundamentals well; focus on explaining production trade-offs and edge cases."
     else:
         recommendation = "Needs improvement. Review the core concepts highlighted in the feedback below and practice explaining technical mechanisms."
+
+    # Phase 7 Adaptive Strategy Summary
+    state = strategy_engine.build_interview_state(connection, session_id)
+    categories_covered = state["categories_covered"]
+    coverage_target = state["coverage_target"]
+
+    difficulty_progression = {}
+    category_breakdown = []
+    for cat_name, cat_state in state["categories"].items():
+        if cat_state["bank_questions_asked"] > 0:
+            prog_str = " -> ".join(cat_state["difficulty_history"]) if cat_state["difficulty_history"] else ""
+            difficulty_progression[cat_name] = prog_str
+            category_breakdown.append({
+                "category": cat_name,
+                "bank_questions_asked": cat_state["bank_questions_asked"],
+                "evaluated_answers_count": cat_state["evaluated_bank_answers_count"],
+                "average_score": cat_state["average_score"],
+                "state": cat_state["state"],
+                "difficulty_progression": prog_str
+            })
+
+    adaptive_summary = {
+        "categories_covered": categories_covered,
+        "coverage_target": coverage_target,
+        "adaptive_follow_ups": follow_up_count,
+        "difficulty_progression": difficulty_progression,
+        "category_breakdown": category_breakdown
+    }
 
     # Check if speech analytics exist for turns in this session
     sa_rows = connection.execute(
@@ -776,6 +847,10 @@ def get_session_summary(connection, session_id: int) -> dict | None:
         "bank_questions_count": bank_count,
         "follow_up_questions_count": follow_up_count,
         "average_score": avg_score,
+        "categories_covered": categories_covered,
+        "coverage_target": coverage_target,
+        "difficulty_progression": difficulty_progression,
+        "adaptive_summary": adaptive_summary,
         "speech_summary": speech_summary,
         "nonverbal_summary": nonverbal_summary,
         "score_breakdown": [

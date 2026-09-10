@@ -218,6 +218,12 @@
       border: 1px solid #fcd34d;
     }
 
+    .badge-adaptive {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+
     .session-meta-row {
       display: flex;
       justify-content: space-between;
@@ -1020,6 +1026,7 @@
             <span id="session-progress-text"><strong>Session #1</strong> &middot; Turn 1 of 5</span>
           </div>
           <div>
+            <span id="session-adaptive-badge" class="badge badge-adaptive" style="margin-right: 6px;">Adaptive Strategy</span>
             <span id="session-question-type-badge" class="badge badge-bank">Question Bank</span>
           </div>
         </div>
@@ -1196,6 +1203,19 @@
           <div class="summary-stat hidden" id="summary-stat-nonverbal">
             <span>Avg Nonverbal Score</span>
             <strong id="summary-avg-nonverbal">0 / 10</strong>
+          </div>
+        </div>
+
+        <!-- Adaptive Strategy Summary Block -->
+        <div id="session-adaptive-summary-card" class="feedback-section" style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 16px 0 20px 0;">
+          <h3 style="margin-top: 0; font-size: 1.05rem; color: #1e3a5f;">🧠 Adaptive Interview Summary</h3>
+          <div style="display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 12px; font-size: 0.95rem;">
+            <div><span style="color: var(--muted);">Categories Covered:</span> <strong id="summary-adaptive-coverage">0 / 0</strong></div>
+            <div><span style="color: var(--muted);">Adaptive Follow-Ups:</span> <strong id="summary-adaptive-followups">0</strong></div>
+          </div>
+          <div style="font-size: 0.9rem;">
+            <div style="font-weight: bold; color: var(--muted); margin-bottom: 6px;">Difficulty Trajectory by Domain:</div>
+            <div id="summary-adaptive-trajectory" style="display: flex; flex-direction: column; gap: 6px;"></div>
           </div>
         </div>
 
@@ -2578,6 +2598,35 @@
           nvStat.classList.add("hidden");
         }
 
+        // Phase 7 Adaptive Summary
+        const adaptCov = document.getElementById("summary-adaptive-coverage");
+        const adaptFol = document.getElementById("summary-adaptive-followups");
+        const adaptTraj = document.getElementById("summary-adaptive-trajectory");
+        if (adaptCov) {
+          adaptCov.textContent = `${summary.categories_covered || 0} / ${summary.coverage_target || 0} target`;
+        }
+        if (adaptFol) {
+          adaptFol.textContent = `${summary.follow_up_questions_count || 0}`;
+        }
+        if (adaptTraj) {
+          adaptTraj.innerHTML = "";
+          const prog = summary.difficulty_progression || {};
+          const keys = Object.keys(prog);
+          if (keys.length === 0) {
+            adaptTraj.innerHTML = `<span style="color: var(--muted); font-style: italic;">No category trajectory recorded.</span>`;
+          } else {
+            keys.forEach((cat) => {
+              const row = document.createElement("div");
+              row.style.padding = "4px 8px";
+              row.style.background = "#ffffff";
+              row.style.borderRadius = "4px";
+              row.style.border = "1px solid #e2e8f0";
+              row.innerHTML = `<strong>${cat}:</strong> <span style="color: #2563eb; font-weight: 500;">${prog[cat]}</span>`;
+              adaptTraj.appendChild(row);
+            });
+          }
+        }
+
         const tableBody = document.getElementById("summary-table-body");
         tableBody.innerHTML = "";
         (summary.score_breakdown || []).forEach((item) => {
@@ -3117,6 +3166,26 @@
           `;
         }
 
+        let adaptHtml = "";
+        if (summary.adaptive_summary || summary.difficulty_progression) {
+          const prog = summary.difficulty_progression || {};
+          const keys = Object.keys(prog);
+          let progBadges = keys.map((cat) => `<span style="display: inline-block; margin-right: 8px; margin-bottom: 4px; padding: 3px 8px; background: #e0e7ff; color: #3730a3; border-radius: 4px; font-size: 0.82rem;"><strong>${cat}:</strong> ${prog[cat]}</span>`).join("");
+          if (!progBadges) progBadges = `<span style="color: var(--muted); font-style: italic;">No progression data</span>`;
+
+          adaptHtml = `
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+              <div style="font-size: 0.8rem; color: var(--muted); font-weight: bold; text-transform: uppercase; margin-bottom: 4px;">Adaptive Strategy & Coverage</div>
+              <div style="font-size: 0.9rem; margin-bottom: 6px;">
+                <strong>Coverage:</strong> ${summary.categories_covered || 0} / ${summary.coverage_target || 0} target &middot;
+                <strong>Adaptive Follow-Ups:</strong> ${summary.follow_up_questions_count || 0}
+              </div>
+              <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 4px;">Difficulty Trajectory:</div>
+              <div>${progBadges}</div>
+            </div>
+          `;
+        }
+
         let turnsHtml = "";
         (summary.score_breakdown || []).forEach((t) => {
           turnsHtml += `
@@ -3162,6 +3231,8 @@
             ${delivHtml}
             ${nvHtml}
           </div>
+
+          ${adaptHtml}
 
           <h3 style="margin: 16px 0 8px 0; font-size: 1rem;">Turn-by-Turn Assessment</h3>
           <table class="turn-history-table" style="width: 100%; border-collapse: collapse; margin-bottom: 18px;">
