@@ -19,6 +19,11 @@ try:
 except (ImportError, ValueError):
     import strategy_engine
 
+try:
+    from . import interviewer
+except (ImportError, ValueError):
+    import interviewer
+
 
 def select_next_bank_question(connection, session_id: int, category: str | None = None, difficulty: str | None = None):
     """
@@ -365,11 +370,12 @@ def record_answer_and_advance(
     answer_text: str,
     evaluation,
     speech_metrics: dict | None = None,
-    nonverbal_metrics: dict | None = None
+    nonverbal_metrics: dict | None = None,
+    interviewer_style: str | None = "professional"
 ) -> dict:
     """
     Records the candidate's answer for the active turn, persists the evaluation,
-    applies follow-up decision logic, and advances the session.
+    applies follow-up decision logic, calls interviewer conversational layer, and advances the session.
     """
     # 1. Retrieve session and active pending turn
     session_row = connection.execute(
@@ -385,9 +391,11 @@ def record_answer_and_advance(
 
     pending_turn = connection.execute(
         """
-        SELECT * FROM session_turns
-        WHERE session_id = ? AND status = 'pending'
-        ORDER BY turn_number ASC LIMIT 1
+        SELECT st.*, q.category as question_category, q.difficulty as question_difficulty
+        FROM session_turns st
+        LEFT JOIN questions q ON st.question_id = q.id
+        WHERE st.session_id = ? AND st.status = 'pending'
+        ORDER BY st.turn_number ASC LIMIT 1
         """,
         (session_id,)
     ).fetchone()
@@ -543,8 +551,28 @@ def record_answer_and_advance(
             "max_turns": max_turns,
             "evaluated_turn": evaluated_summary,
             "decision": "completed",
-            "next_question": None
+            "next_question": None,
+            "interviewer_response": None,
+            "interviewer_response_type": None,
+            "interviewer_style": interviewer_style or "professional"
         }
+
+    # Bounded prior turns for interviewer context (recent 2 turns)
+    prev_turns_rows = connection.execute(
+        """
+        SELECT st.turn_number, st.question_text, a.answer, q.category
+        FROM session_turns st
+        LEFT JOIN answers a ON st.answer_id = a.id
+        LEFT JOIN questions q ON st.question_id = q.id
+        WHERE st.session_id = ? AND st.turn_number < ?
+        ORDER BY st.turn_number ASC
+        """,
+        (session_id, current_turn_num)
+    ).fetchall()
+    recent_turns = [dict(r) for r in prev_turns_rows]
+
+    current_cat = pending_turn["question_category"] or session_row["category"] or "Technical"
+    current_diff = pending_turn["question_difficulty"] or session_row["difficulty"] or "medium"
 
     # 6. Apply Follow-Up Decision Rules:
     # Rule A: Circuit Breaker - At most 1 consecutive follow-up
@@ -593,6 +621,36 @@ def record_answer_and_advance(
 
         connection.commit()
 
+        # Phase 8: Conversational wording for follow-up
+        interviewer_ctx = interviewer.build_interviewer_context(
+            current_category=current_cat,
+            current_difficulty=current_diff,
+            current_question=pending_turn["question_text"],
+            candidate_answer=answer_text,
+            evaluation_feedback=evaluation.feedback,
+            missing_points=evaluation.missing_points,
+            strategy_action="follow_up",
+            next_category=current_cat,
+            next_difficulty=diff,
+            next_question_text=follow_up_text,
+            recent_turns=recent_turns
+        )
+        try:
+            interviewer_out = interviewer.generate_interviewer_response(
+                context=interviewer_ctx,
+                action="follow_up",
+                is_same_category=True,
+                style=interviewer_style or "professional"
+            )
+        except Exception:
+            interviewer_out = interviewer.get_deterministic_fallback(
+                action="follow_up",
+                is_same_category=True,
+                style=interviewer_style or "professional",
+                next_category=current_cat,
+                missing_points=evaluation.missing_points
+            )
+
         return {
             "session_id": session_id,
             "status": "active",
@@ -600,6 +658,9 @@ def record_answer_and_advance(
             "max_turns": max_turns,
             "evaluated_turn": evaluated_summary,
             "decision": "follow_up",
+            "interviewer_response": interviewer_out.get("interviewer_response"),
+            "interviewer_response_type": interviewer_out.get("response_type"),
+            "interviewer_style": interviewer_style or "professional",
             "next_question": {
                 "turn_id": turn_cursor.lastrowid,
                 "turn_number": next_turn_num,
@@ -629,6 +690,38 @@ def record_answer_and_advance(
 
             connection.commit()
 
+            # Phase 8: Conversational wording for new bank question
+            next_cat = next_bank_q["category"]
+            is_same_cat = bool(current_cat and next_cat and current_cat.strip().lower() == next_cat.strip().lower())
+
+            interviewer_ctx = interviewer.build_interviewer_context(
+                current_category=current_cat,
+                current_difficulty=current_diff,
+                current_question=pending_turn["question_text"],
+                candidate_answer=answer_text,
+                evaluation_feedback=evaluation.feedback,
+                missing_points=evaluation.missing_points,
+                strategy_action="new_bank_question",
+                next_category=next_cat,
+                next_difficulty=next_bank_q["difficulty"],
+                next_question_text=next_bank_q["question"],
+                recent_turns=recent_turns
+            )
+            try:
+                interviewer_out = interviewer.generate_interviewer_response(
+                    context=interviewer_ctx,
+                    action="new_bank_question",
+                    is_same_category=is_same_cat,
+                    style=interviewer_style or "professional"
+                )
+            except Exception:
+                interviewer_out = interviewer.get_deterministic_fallback(
+                    action="new_bank_question",
+                    is_same_category=is_same_cat,
+                    style=interviewer_style or "professional",
+                    next_category=next_cat
+                )
+
             return {
                 "session_id": session_id,
                 "status": "active",
@@ -637,6 +730,9 @@ def record_answer_and_advance(
                 "evaluated_turn": evaluated_summary,
                 "decision": "new_question",
                 "strategy": strategy_decision,
+                "interviewer_response": interviewer_out.get("interviewer_response"),
+                "interviewer_response_type": interviewer_out.get("response_type"),
+                "interviewer_style": interviewer_style or "professional",
                 "next_question": {
                     "turn_id": turn_cursor.lastrowid,
                     "turn_number": next_turn_num,
@@ -667,6 +763,9 @@ def record_answer_and_advance(
                 "evaluated_turn": evaluated_summary,
                 "decision": "completed",
                 "strategy": strategy_decision,
+                "interviewer_response": None,
+                "interviewer_response_type": None,
+                "interviewer_style": interviewer_style or "professional",
                 "next_question": None
             }
 

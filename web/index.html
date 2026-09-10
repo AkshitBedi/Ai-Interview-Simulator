@@ -224,6 +224,57 @@
       border: 1px solid #cbd5e1;
     }
 
+    /* Phase 8: Conversational Interviewer Bubble */
+    .interviewer-bubble {
+      display: flex;
+      flex-direction: column;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-left: 4px solid #0284c7;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .interviewer-avatar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .avatar-icon {
+      font-size: 1.2rem;
+    }
+
+    .interviewer-label {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #0369a1;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-response-type {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      border-radius: 9999px;
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #7dd3fc;
+      text-transform: uppercase;
+    }
+
+    .interviewer-speech {
+      font-size: 1.05rem;
+      color: #0f172a;
+      line-height: 1.5;
+      font-style: italic;
+    }
+
     .session-meta-row {
       display: flex;
       justify-content: space-between;
@@ -1014,6 +1065,15 @@
           </select>
         </div>
 
+        <div class="field">
+          <label for="session-interviewer-style">Interviewer Style</label>
+          <select id="session-interviewer-style">
+            <option value="professional" selected>Professional (Balanced)</option>
+            <option value="conversational">Conversational (Warm &amp; Encouraging)</option>
+            <option value="strict">Strict (Direct &amp; Rigorous)</option>
+          </select>
+        </div>
+
         <button type="button" id="start-session-button">
           Start Interview Session
         </button>
@@ -1029,6 +1089,15 @@
             <span id="session-adaptive-badge" class="badge badge-adaptive" style="margin-right: 6px;">Adaptive Strategy</span>
             <span id="session-question-type-badge" class="badge badge-bank">Question Bank</span>
           </div>
+        </div>
+
+        <!-- Phase 8: Conversational Interviewer Bubble -->
+        <div id="session-interviewer-bubble" class="interviewer-bubble hidden">
+          <div class="interviewer-avatar">
+            <span class="avatar-icon">🧑‍💼</span>
+            <span class="interviewer-label">Interviewer</span>
+          </div>
+          <div id="session-interviewer-text" class="interviewer-speech"></div>
         </div>
 
         <h2 id="session-question-title"></h2>
@@ -1528,6 +1597,10 @@
     const sessionCategorySelect = document.getElementById("session-category");
     const sessionDifficultySelect = document.getElementById("session-difficulty");
     const sessionTurnsSelect = document.getElementById("session-turns-select");
+    const sessionInterviewerStyleSelect = document.getElementById("session-interviewer-style");
+    const sessionInterviewerBubble = document.getElementById("session-interviewer-bubble");
+    const sessionInterviewerText = document.getElementById("session-interviewer-text");
+    let activeInterviewerStyle = "professional";
     const startSessionButton = document.getElementById("start-session-button");
     const sessionActiveCard = document.getElementById("session-active");
     const sessionProgressText = document.getElementById("session-progress-text");
@@ -1766,8 +1839,9 @@
         activeSessionId = session.session_id;
         activeTurnNumber = session.current_turn;
         activeMaxTurns = session.max_turns;
+        activeInterviewerStyle = (sessionInterviewerStyleSelect && sessionInterviewerStyleSelect.value) ? sessionInterviewerStyleSelect.value : "professional";
 
-        displaySessionQuestion(session.question);
+        displaySessionQuestion(session.question, null, null);
         document.getElementById("session-setup").classList.add("hidden");
         sessionActiveCard.classList.remove("hidden");
         setStatus("");
@@ -1804,7 +1878,7 @@
       }
     }
 
-    function displaySessionQuestion(questionData) {
+    function displaySessionQuestion(questionData, interviewerResponse = null, responseType = null) {
       sessionProgressText.innerHTML = `<strong>Session #${activeSessionId}</strong> &middot; Turn ${activeTurnNumber} of ${activeMaxTurns}`;
       
       if (questionData.is_follow_up) {
@@ -1813,6 +1887,14 @@
       } else {
         sessionQuestionTypeBadge.className = "badge badge-bank";
         sessionQuestionTypeBadge.textContent = "Question Bank";
+      }
+
+      // Phase 8: Conversational interviewer wording
+      if (interviewerResponse) {
+        sessionInterviewerBubble.classList.remove("hidden");
+        sessionInterviewerText.textContent = interviewerResponse;
+      } else {
+        sessionInterviewerBubble.classList.add("hidden");
       }
 
       sessionQuestionTitle.textContent = questionData.question;
@@ -2258,6 +2340,7 @@
         const formData = new FormData();
         formData.append("audio_file", recordedWavBlob, "answer.wav");
         formData.append("video_file", recordedVideoBlob, "answer.webm");
+        formData.append("interviewer_style", activeInterviewerStyle);
 
         const response = await fetch(`${API_URL}/sessions/${activeSessionId}/answer-multimodal`, {
           method: "POST",
@@ -2280,7 +2363,7 @@
           await loadSessionSummary(activeSessionId);
         } else {
           activeTurnNumber = data.current_turn;
-          displaySessionQuestion(data.next_question);
+          displaySessionQuestion(data.next_question, data.interviewer_response, data.interviewer_response_type);
           setStatus(
             data.decision === "follow_up"
               ? "The interviewer followed up on a missing concept from your answer."
@@ -2321,7 +2404,7 @@
         const response = await fetchApi(`/sessions/${activeSessionId}/answer`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ answer })
+          body: JSON.stringify({ answer, interviewer_style: activeInterviewerStyle })
         });
 
         // 1. Render turn evaluation
@@ -2335,7 +2418,7 @@
         } else {
           // Advance to next question
           activeTurnNumber = response.current_turn;
-          displaySessionQuestion(response.next_question);
+          displaySessionQuestion(response.next_question, response.interviewer_response, response.interviewer_response_type);
           setStatus(
             response.decision === "follow_up"
               ? "The interviewer followed up on a missing concept from your answer."
@@ -2369,6 +2452,7 @@
       try {
         const formData = new FormData();
         formData.append("file", recordedWavBlob, "answer.wav");
+        formData.append("interviewer_style", activeInterviewerStyle);
 
         const response = await fetch(`${API_URL}/sessions/${activeSessionId}/answer-audio`, {
           method: "POST",
@@ -2390,7 +2474,7 @@
           await loadSessionSummary(activeSessionId);
         } else {
           activeTurnNumber = data.current_turn;
-          displaySessionQuestion(data.next_question);
+          displaySessionQuestion(data.next_question, data.interviewer_response, data.interviewer_response_type);
           setStatus(
             data.decision === "follow_up"
               ? "The interviewer followed up on a missing concept from your answer."
@@ -2667,6 +2751,8 @@
       stopCameraPreview();
       resetAudioRecording();
       resetVideoRecording();
+      sessionInterviewerBubble.classList.add("hidden");
+      sessionInterviewerText.textContent = "";
       sessionActiveCard.classList.add("hidden");
       sessionEvalCard.classList.add("hidden");
       sessionSummaryCard.classList.add("hidden");

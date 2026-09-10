@@ -227,6 +227,7 @@ def update_answer(answer_id: int, updated_answer: InterviewAnswer):
     }
 class AnswerSubmission(BaseModel):
     answer: str = Field(min_length=10)
+    interviewer_style: str | None = Field(default="professional")
 
 @app.get("/questions/random")
 def get_random_question(
@@ -585,6 +586,7 @@ class SessionCreate(BaseModel):
 
 class SessionAnswerSubmission(BaseModel):
     answer: str = Field(min_length=10)
+    interviewer_style: str | None = Field(default="professional")
 
 
 @app.post("/sessions", status_code=201)
@@ -672,7 +674,8 @@ def submit_session_answer(session_id: int, submission: SessionAnswerSubmission):
             connection=connection,
             session_id=session_id,
             answer_text=submission.answer,
-            evaluation=evaluation
+            evaluation=evaluation,
+            interviewer_style=submission.interviewer_style
         )
     except Exception as e:
         connection.close()
@@ -697,7 +700,8 @@ def get_session_summary_endpoint(session_id: int):
 @app.post("/sessions/{session_id}/answer-audio")
 async def submit_session_audio_answer(
     session_id: int,
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    interviewer_style: str = Form("professional")
 ):
     """
     Submits a spoken audio answer (PCM WAV) to the active turn of an interview session.
@@ -837,7 +841,8 @@ async def submit_session_audio_answer(
             session_id=session_id,
             answer_text=transcript_text,
             evaluation=evaluation,
-            speech_metrics=speech_metrics
+            speech_metrics=speech_metrics,
+            interviewer_style=interviewer_style
         )
 
         return result
@@ -945,7 +950,8 @@ def get_speech_engine_status():
 async def submit_session_multimodal_answer(
     session_id: int,
     audio_file: UploadFile = File(...),
-    video_file: UploadFile = File(...)
+    video_file: UploadFile = File(...),
+    interviewer_style: str = Form("professional")
 ):
     """
     Submits a multimodal answer (16kHz PCM WAV audio + WebM/MP4 video) to the active turn.
@@ -1120,7 +1126,8 @@ async def submit_session_multimodal_answer(
             answer_text=transcript_text,
             evaluation=evaluation,
             speech_metrics=speech_metrics,
-            nonverbal_metrics=nonverbal_metrics
+            nonverbal_metrics=nonverbal_metrics,
+            interviewer_style=interviewer_style
         )
 
         return result
