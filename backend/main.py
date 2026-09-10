@@ -37,6 +37,7 @@ try:
         get_vision_status,
         VisionProcessingError
     )
+    from .analytics import get_analytics_overview, get_analytics_history
 except (ImportError, ValueError):
     # Works when started inside backend: uvicorn main:app
     from database import create_tables, get_db
@@ -60,6 +61,7 @@ except (ImportError, ValueError):
         get_vision_status,
         VisionProcessingError
     )
+    from analytics import get_analytics_overview, get_analytics_history
 from typing import Literal
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form
@@ -1161,3 +1163,31 @@ def get_vision_engine_status():
     Returns the current computer vision backend status, capabilities, and health.
     """
     return get_vision_status()
+
+
+@app.get("/analytics/overview")
+def get_analytics_overview_endpoint():
+    """
+    Retrieves global deterministic analytics across all completed interview sessions.
+    """
+    connection = get_db()
+    try:
+        return get_analytics_overview(connection)
+    finally:
+        connection.close()
+
+
+@app.get("/analytics/history")
+def get_analytics_history_endpoint(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0)
+):
+    """
+    Retrieves paginated interview history for completed sessions.
+    """
+    connection = get_db()
+    try:
+        return get_analytics_history(connection, limit=limit, offset=offset)
+    finally:
+        connection.close()
+

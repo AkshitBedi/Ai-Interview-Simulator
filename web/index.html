@@ -619,6 +619,332 @@
         align-items: stretch;
       }
     }
+    /* Phase 6 Analytics Styles */
+    .analytics-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .analytics-kpi-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .analytics-kpi-card p {
+      margin: 0 0 6px 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .analytics-kpi-card strong {
+      font-size: 1.7rem;
+      color: var(--text);
+      display: block;
+    }
+
+    .analytics-kpi-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .trajectory-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      margin-top: 8px;
+      width: fit-content;
+    }
+
+    .trajectory-badge.improvement {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+
+    .trajectory-badge.decline {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .trajectory-badge.neutral {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+    }
+
+    .cat-badge-strong {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: bold;
+    }
+
+    .cat-badge-moderate {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: bold;
+    }
+
+    .cat-badge-needs-focus {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: bold;
+    }
+
+    .cat-callouts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0 24px 0;
+    }
+
+    .callout-card {
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .callout-card h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-strong {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+
+    .callout-strong h3 {
+      color: #15803d;
+    }
+
+    .callout-focus {
+      background: #fff1f2;
+      border-color: #fecdd3;
+    }
+
+    .callout-focus h3 {
+      color: #be123c;
+    }
+
+    .callout-pills-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .callout-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: white;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .trends-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      margin: 18px 0;
+    }
+
+    .trend-chart-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .trend-chart-card h3 {
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .trend-chart-card p {
+      margin: 0 0 12px 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .chart-svg {
+      width: 100%;
+      height: auto;
+      max-height: 200px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      display: block;
+    }
+
+    .btn-review {
+      background: var(--blue);
+      color: white;
+      padding: 6px 12px;
+      border: 0;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .btn-review:hover {
+      background: var(--blue-dark);
+    }
+
+    .analytics-empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      background: #f8fafc;
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+
+    .analytics-empty-state h3 {
+      margin-top: 0;
+      color: #334155;
+      font-size: 1.2rem;
+    }
+
+    .analytics-empty-state p {
+      color: var(--muted);
+      max-width: 460px;
+      margin: 8px auto 18px auto;
+      line-height: 1.5;
+    }
+
+    .pagination-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .btn-page {
+      padding: 6px 14px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-page:hover:not(:disabled) {
+      background: #f1f5f9;
+    }
+
+    .btn-page:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* Review Modal */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(2px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-dialog {
+      background: white;
+      width: 100%;
+      max-width: 760px;
+      max-height: 90vh;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      color: #1e3a5f;
+    }
+
+    .modal-close-btn {
+      background: transparent;
+      border: 0;
+      font-size: 1.5rem;
+      line-height: 1;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 2px 6px;
+    }
+
+    .modal-close-btn:hover {
+      color: var(--text);
+    }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
   </style>
 </head>
 
@@ -645,6 +971,9 @@
       </button>
       <button type="button" class="tab-btn" id="tab-practice-btn">
         Single Question Practice
+      </button>
+      <button type="button" class="tab-btn" id="tab-analytics-btn">
+        📊 Analytics & Progress
       </button>
     </nav>
 
@@ -962,6 +1291,191 @@
         <div id="previous-answers"></div>
       </section>
     </div>
+
+    <!-- SECTION C: INTERVIEW ANALYTICS & PROGRESS (Phase 6) -->
+    <div id="analytics-container" class="hidden">
+      <!-- Empty State Banner -->
+      <div id="analytics-empty-state" class="analytics-empty-state hidden">
+        <div style="font-size: 2.2rem; margin-bottom: 8px;">📈</div>
+        <h3>No Completed Interviews Yet</h3>
+        <p>
+          Complete a full mock interview session to unlock comprehensive analytics,
+          category breakdowns, and multi-dimensional progress tracking.
+        </p>
+        <button type="button" id="analytics-start-session-btn" style="background: var(--blue);">
+          Start an Interview Session
+        </button>
+      </div>
+
+      <!-- Main Analytics Content -->
+      <div id="analytics-content" class="hidden">
+        <!-- 4 Executive KPI Cards (Independent Dimensions) -->
+        <section aria-label="Executive Performance KPIs">
+          <h2>Executive Performance Overview</h2>
+          <div class="analytics-kpi-grid">
+            <!-- 1. Volume & Completion -->
+            <div class="analytics-kpi-card">
+              <div>
+                <p>Completed Interviews</p>
+                <strong id="kpi-completed-interviews">0</strong>
+              </div>
+              <div class="analytics-kpi-sub" id="kpi-turn-volumes">
+                0 total turns &middot; 0 evaluated answers<br />
+                (0 bank &middot; 0 follow-ups)
+              </div>
+            </div>
+
+            <!-- 2. Technical Proficiency -->
+            <div class="analytics-kpi-card">
+              <div>
+                <p>Technical Proficiency</p>
+                <strong id="kpi-tech-avg">--</strong>
+              </div>
+              <div>
+                <div id="kpi-tech-trajectory"></div>
+                <div class="analytics-kpi-sub">Domain accuracy & problem-solving</div>
+              </div>
+            </div>
+
+            <!-- 3. Communication & Delivery -->
+            <div class="analytics-kpi-card">
+              <div>
+                <p>Delivery & Fluency</p>
+                <strong id="kpi-deliv-avg">--</strong>
+              </div>
+              <div>
+                <div id="kpi-deliv-trajectory"></div>
+                <div class="analytics-kpi-sub">Pacing, pause rhythm, filler control</div>
+              </div>
+            </div>
+
+            <!-- 4. Nonverbal Telemetry -->
+            <div class="analytics-kpi-card">
+              <div>
+                <p>Nonverbal Telemetry</p>
+                <strong id="kpi-nv-avg">--</strong>
+              </div>
+              <div>
+                <div id="kpi-nv-trajectory"></div>
+                <div class="analytics-kpi-sub">Framing, gaze contact, head stability</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Category Performance -->
+        <section class="card" aria-label="Category Breakdown" style="margin-top: 24px;">
+          <h2>Technical Performance by Category</h2>
+          <p style="color: var(--muted); font-size: 0.85rem; margin-top: -4px;">
+            Performance across question categories with deterministic tie-handling and status thresholds (Strong &ge; 7.0, Moderate 6.0&ndash;6.9, Needs Focus &lt; 6.0).
+          </p>
+
+          <table class="turn-history-table" style="margin-top: 14px;">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Evaluated Answers</th>
+                <th>Average Score</th>
+                <th>Best Score</th>
+                <th>Worst Score</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="analytics-categories-table-body"></tbody>
+          </table>
+
+          <!-- Category Focus Callouts -->
+          <div class="cat-callouts-grid">
+            <div class="callout-card callout-strong">
+              <h3>🏆 Strongest Categories</h3>
+              <div id="strongest-categories-list" class="callout-pills-list"></div>
+            </div>
+
+            <div class="callout-card callout-focus">
+              <h3>🎯 Categories Needing Focus</h3>
+              <div id="focus-categories-list" class="callout-pills-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Chronological Progress Trends -->
+        <section class="card" aria-label="Performance Trends" style="margin-top: 24px;">
+          <h2>Chronological Performance Trends</h2>
+          <p style="color: var(--muted); font-size: 0.85rem; margin-top: -4px;">
+            Pure chronological trajectory across completed sessions without data interpolation.
+          </p>
+
+          <div class="trends-grid">
+            <!-- 1. Technical Score Trend -->
+            <div class="trend-chart-card">
+              <h3>Technical Score Trajectory (Scale 1–10)</h3>
+              <p>Evaluation score across all completed sessions in order of completion</p>
+              <div id="chart-technical-container"></div>
+            </div>
+
+            <!-- 2. Speech Dynamics (Delivery & Pace) -->
+            <div class="trend-chart-card" id="chart-speech-card">
+              <h3>Speech Delivery & Speaking Pace (WPM)</h3>
+              <p>Audio delivery score (1–10) and speaking speed across recorded audio sessions</p>
+              <div id="chart-speech-container"></div>
+            </div>
+
+            <!-- 3. Nonverbal Telemetry Score -->
+            <div class="trend-chart-card" id="chart-nonverbal-card">
+              <h3>Nonverbal Telemetry Trajectory (Scale 1–10)</h3>
+              <p>Presence, gaze alignment, and motion stability across recorded video sessions</p>
+              <div id="chart-nonverbal-container"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Completed Interview History -->
+        <section class="card" aria-label="Completed Interview History" style="margin-top: 24px;">
+          <h2>Completed Interview History</h2>
+          <p style="color: var(--muted); font-size: 0.85rem; margin-top: -4px;">
+            History of completed mock interviews ordered newest first. Click "Review Session" to inspect the complete turn-by-turn evaluation.
+          </p>
+
+          <table class="turn-history-table" style="margin-top: 14px;">
+            <thead>
+              <tr>
+                <th>Session</th>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Difficulty</th>
+                <th>Turns</th>
+                <th>Technical</th>
+                <th>Delivery</th>
+                <th>Nonverbal</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="analytics-history-table-body"></tbody>
+          </table>
+
+          <div class="pagination-bar">
+            <span id="analytics-page-info">Showing sessions</span>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn-page" id="btn-analytics-prev" disabled>&larr; Previous</button>
+              <button type="button" class="btn-page" id="btn-analytics-next" disabled>Next &rarr;</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Session Review Modal Dialog -->
+      <div id="analytics-review-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <h2 id="analytics-modal-title">Session Review</h2>
+            <button type="button" class="modal-close-btn" id="analytics-modal-close" aria-label="Close modal">&times;</button>
+          </div>
+          <div class="modal-body" id="analytics-modal-body">
+            <!-- Dynamically populated with session review breakdown -->
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script>
@@ -970,8 +1484,19 @@
     // Navigation Tabs
     const tabSessionBtn = document.getElementById("tab-session-btn");
     const tabPracticeBtn = document.getElementById("tab-practice-btn");
+    const tabAnalyticsBtn = document.getElementById("tab-analytics-btn");
     const sessionContainer = document.getElementById("session-container");
     const practiceContainer = document.getElementById("practice-container");
+    const analyticsContainer = document.getElementById("analytics-container");
+    const analyticsEmptyState = document.getElementById("analytics-empty-state");
+    const analyticsContent = document.getElementById("analytics-content");
+    const analyticsStartSessionBtn = document.getElementById("analytics-start-session-btn");
+    const btnAnalyticsPrev = document.getElementById("btn-analytics-prev");
+    const btnAnalyticsNext = document.getElementById("btn-analytics-next");
+    const analyticsReviewModal = document.getElementById("analytics-review-modal");
+    const analyticsModalClose = document.getElementById("analytics-modal-close");
+    let analyticsPageOffset = 0;
+    const analyticsPageLimit = 20;
     const statusMessage = document.getElementById("status");
 
     // Session State
@@ -1068,10 +1593,24 @@
     // Event Listeners
     tabSessionBtn.addEventListener("click", () => switchTab("session"));
     tabPracticeBtn.addEventListener("click", () => switchTab("practice"));
+    tabAnalyticsBtn.addEventListener("click", () => switchTab("analytics"));
 
     startSessionButton.addEventListener("click", startSession);
     sessionSubmitButton.addEventListener("click", submitSessionAnswer);
     startNewSessionButton.addEventListener("click", resetSessionView);
+
+    analyticsStartSessionBtn.addEventListener("click", () => switchTab("session"));
+    btnAnalyticsPrev.addEventListener("click", () => changeAnalyticsPage(-1));
+    btnAnalyticsNext.addEventListener("click", () => changeAnalyticsPage(1));
+    analyticsModalClose.addEventListener("click", closeSessionReview);
+    analyticsReviewModal.addEventListener("click", (e) => {
+      if (e.target === analyticsReviewModal) closeSessionReview();
+    });
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !analyticsReviewModal.classList.contains("hidden")) {
+        closeSessionReview();
+      }
+    });
 
     btnModeText.addEventListener("click", () => setAnswerMode("text"));
     btnModeVoice.addEventListener("click", () => setAnswerMode("voice"));
@@ -1107,13 +1646,25 @@
       if (mode === "session") {
         tabSessionBtn.classList.add("active");
         tabPracticeBtn.classList.remove("active");
+        tabAnalyticsBtn.classList.remove("active");
         sessionContainer.classList.remove("hidden");
         practiceContainer.classList.add("hidden");
-      } else {
+        analyticsContainer.classList.add("hidden");
+      } else if (mode === "practice") {
         tabPracticeBtn.classList.add("active");
         tabSessionBtn.classList.remove("active");
+        tabAnalyticsBtn.classList.remove("active");
         practiceContainer.classList.remove("hidden");
         sessionContainer.classList.add("hidden");
+        analyticsContainer.classList.add("hidden");
+      } else if (mode === "analytics") {
+        tabAnalyticsBtn.classList.add("active");
+        tabSessionBtn.classList.remove("active");
+        tabPracticeBtn.classList.remove("active");
+        analyticsContainer.classList.remove("hidden");
+        sessionContainer.classList.add("hidden");
+        practiceContainer.classList.add("hidden");
+        loadAnalyticsDashboard();
       }
     }
 
@@ -2219,6 +2770,437 @@
       } finally {
         viewAnswersButton.disabled = false;
       }
+    }
+
+    // ==========================================
+    // PHASE 6: INTERVIEW ANALYTICS & PROGRESS
+    // ==========================================
+
+    async function loadAnalyticsDashboard() {
+      try {
+        setStatus("Loading analytics & progress tracking...");
+        const [overview, history] = await Promise.all([
+          fetchApi("/analytics/overview"),
+          fetchApi(`/analytics/history?limit=${analyticsPageLimit}&offset=${analyticsPageOffset}`)
+        ]);
+
+        if (overview.total_completed_interviews === 0) {
+          analyticsEmptyState.classList.remove("hidden");
+          analyticsContent.classList.add("hidden");
+          setStatus("");
+          return;
+        }
+
+        analyticsEmptyState.classList.add("hidden");
+        analyticsContent.classList.remove("hidden");
+
+        renderAnalyticsOverview(overview);
+        renderAnalyticsHistory(history);
+        renderTrendsCharts(overview.trends.sessions || []);
+
+        setStatus("");
+      } catch (err) {
+        setStatus(`Failed to load analytics: ${err.message}`, true);
+      }
+    }
+
+    function formatTrajectoryBadge(deltaPercent, firstId, latestId) {
+      if (deltaPercent === null || deltaPercent === undefined) {
+        if (firstId) {
+          return `<span class="trajectory-badge neutral">Baseline (Session #${firstId})</span>`;
+        }
+        return `<span class="trajectory-badge neutral">Needs 2+ sessions</span>`;
+      }
+      if (deltaPercent > 0) {
+        return `<span class="trajectory-badge improvement">▲ +${deltaPercent}% improvement (S#${firstId} → S#${latestId})</span>`;
+      } else if (deltaPercent < 0) {
+        return `<span class="trajectory-badge decline">▼ ${deltaPercent}% decline (S#${firstId} → S#${latestId})</span>`;
+      } else {
+        return `<span class="trajectory-badge neutral">► 0.0% unchanged (S#${firstId} → S#${latestId})</span>`;
+      }
+    }
+
+    function renderAnalyticsOverview(data) {
+      // 1. Executive Macro Counts
+      document.getElementById("kpi-completed-interviews").textContent = data.total_completed_interviews;
+      document.getElementById("kpi-turn-volumes").innerHTML = `
+        ${data.total_turns} total turns &middot; ${data.total_evaluated_answers} evaluated answers<br />
+        (${data.total_bank_questions} bank &middot; ${data.total_follow_ups} follow-ups)
+      `;
+
+      // 2. Technical Dimension
+      document.getElementById("kpi-tech-avg").textContent = data.technical_average !== null
+        ? `${data.technical_average} / 10`
+        : "No data";
+      document.getElementById("kpi-tech-trajectory").innerHTML = formatTrajectoryBadge(
+        data.change.technical_percent,
+        data.change.technical_first_session_id,
+        data.change.technical_latest_session_id
+      );
+
+      // 3. Communication / Delivery Dimension
+      document.getElementById("kpi-deliv-avg").textContent = data.delivery_average !== null
+        ? `${data.delivery_average} / 10`
+        : "No audio recorded";
+      document.getElementById("kpi-deliv-trajectory").innerHTML = formatTrajectoryBadge(
+        data.change.delivery_percent,
+        data.change.delivery_first_session_id,
+        data.change.delivery_latest_session_id
+      );
+
+      // 4. Nonverbal Telemetry Dimension
+      document.getElementById("kpi-nv-avg").textContent = data.nonverbal_average !== null
+        ? `${data.nonverbal_average} / 10`
+        : "No video recorded";
+      document.getElementById("kpi-nv-trajectory").innerHTML = formatTrajectoryBadge(
+        data.change.nonverbal_percent,
+        data.change.nonverbal_first_session_id,
+        data.change.nonverbal_latest_session_id
+      );
+
+      // 5. Category Performance Table
+      const catTableBody = document.getElementById("analytics-categories-table-body");
+      catTableBody.innerHTML = "";
+
+      (data.categories || []).forEach((cat) => {
+        let statusBadge = `<span class="cat-badge-moderate">Moderate</span>`;
+        if (cat.status === "strong") {
+          statusBadge = `<span class="cat-badge-strong">Strong</span>`;
+        } else if (cat.status === "needs_focus") {
+          statusBadge = `<span class="cat-badge-needs-focus">Needs Focus</span>`;
+        }
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><strong>${cat.category}</strong></td>
+          <td>${cat.evaluated_answers_count}</td>
+          <td><strong>${cat.average_score} / 10</strong></td>
+          <td>${cat.best_score} / 10</td>
+          <td>${cat.worst_score} / 10</td>
+          <td>${statusBadge}</td>
+        `;
+        catTableBody.appendChild(row);
+      });
+
+      // 6. Category Callouts (Strongest & Needing Focus)
+      const strongestList = document.getElementById("strongest-categories-list");
+      if (data.strongest_categories && data.strongest_categories.length > 0) {
+        strongestList.innerHTML = data.strongest_categories.map((c) => `
+          <span class="callout-pill" style="color: #15803d; border-color: #86efac;">
+            <strong>${c.category}</strong>: ${c.average_score}/10 (${c.evaluated_answers_count} ans)
+          </span>
+        `).join("");
+      } else {
+        strongestList.innerHTML = `<span style="color: var(--muted); font-size: 0.85rem;">No evaluated answers yet.</span>`;
+      }
+
+      const focusList = document.getElementById("focus-categories-list");
+      if (data.categories_needing_focus && data.categories_needing_focus.length > 0) {
+        focusList.innerHTML = data.categories_needing_focus.map((c) => `
+          <span class="callout-pill" style="color: #be123c; border-color: #fca5a5;">
+            <strong>${c.category}</strong>: ${c.average_score}/10 (${c.evaluated_answers_count} ans)
+          </span>
+        `).join("");
+      } else {
+        focusList.innerHTML = `<span style="color: var(--muted); font-size: 0.85rem;">No categories needing focus.</span>`;
+      }
+    }
+
+    function renderAnalyticsHistory(historyData) {
+      const tbody = document.getElementById("analytics-history-table-body");
+      tbody.innerHTML = "";
+
+      (historyData.sessions || []).forEach((s) => {
+        const tr = document.createElement("tr");
+        const dateStr = s.completed_at
+          ? new Date(s.completed_at).toLocaleDateString() + " " + new Date(s.completed_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : "N/A";
+
+        tr.innerHTML = `
+          <td><strong>#${s.session_id}</strong></td>
+          <td>${dateStr}</td>
+          <td>${s.category || "Any"}</td>
+          <td><span style="text-transform: capitalize;">${s.difficulty || "Any"}</span></td>
+          <td>${s.evaluated_answers_count} eval / ${s.turns_count} total (${s.follow_up_count} follow-up)</td>
+          <td><strong>${s.technical_score !== null ? s.technical_score + " / 10" : "N/A"}</strong></td>
+          <td>${s.delivery_score !== null ? s.delivery_score + " / 10" : '<span style="color: var(--muted);">No audio</span>'}</td>
+          <td>${s.nonverbal_score !== null ? s.nonverbal_score + " / 10" : '<span style="color: var(--muted);">No video</span>'}</td>
+          <td><button type="button" class="btn-review" onclick="openSessionReview(${s.session_id})">Review Session</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Pagination info
+      const total = historyData.total_completed;
+      const start = total > 0 ? historyData.offset + 1 : 0;
+      const end = Math.min(historyData.offset + (historyData.sessions || []).length, total);
+      document.getElementById("analytics-page-info").textContent = `Showing ${start}–${end} of ${total} completed sessions`;
+
+      btnAnalyticsPrev.disabled = historyData.offset <= 0;
+      btnAnalyticsNext.disabled = historyData.offset + historyData.limit >= total;
+    }
+
+    async function changeAnalyticsPage(delta) {
+      analyticsPageOffset = Math.max(0, analyticsPageOffset + delta * analyticsPageLimit);
+      try {
+        const history = await fetchApi(`/analytics/history?limit=${analyticsPageLimit}&offset=${analyticsPageOffset}`);
+        renderAnalyticsHistory(history);
+      } catch (err) {
+        setStatus(`Pagination error: ${err.message}`, true);
+      }
+    }
+
+    function renderTrendsCharts(sessions) {
+      // 1. Technical Score Trajectory Chart
+      renderSvgLineChart({
+        containerId: "chart-technical-container",
+        sessions: sessions,
+        metricKey: "technical_score",
+        minY: 0,
+        maxY: 10,
+        strokeColor: "#2563eb",
+        fillColor: "rgba(37, 99, 235, 0.08)",
+        unit: "/10",
+        yLabel: "Score"
+      });
+
+      // 2. Speech Delivery Chart (if any audio sessions exist)
+      const audioSessions = sessions.filter((s) => s.delivery_score !== null);
+      const speechCard = document.getElementById("chart-speech-card");
+      if (audioSessions.length > 0) {
+        speechCard.classList.remove("hidden");
+        renderSvgLineChart({
+          containerId: "chart-speech-container",
+          sessions: audioSessions,
+          metricKey: "delivery_score",
+          minY: 0,
+          maxY: 10,
+          strokeColor: "#0d9488",
+          fillColor: "rgba(13, 148, 136, 0.08)",
+          unit: "/10",
+          yLabel: "Delivery"
+        });
+      } else {
+        document.getElementById("chart-speech-container").innerHTML = `
+          <div style="text-align: center; padding: 24px; color: var(--muted); font-size: 0.88rem;">
+            No audio-recorded sessions in completed interviews yet.
+          </div>
+        `;
+      }
+
+      // 3. Nonverbal Telemetry Chart (if any video sessions exist)
+      const videoSessions = sessions.filter((s) => s.nonverbal_score !== null);
+      const nvCard = document.getElementById("chart-nonverbal-card");
+      if (videoSessions.length > 0) {
+        nvCard.classList.remove("hidden");
+        renderSvgLineChart({
+          containerId: "chart-nonverbal-container",
+          sessions: videoSessions,
+          metricKey: "nonverbal_score",
+          minY: 0,
+          maxY: 10,
+          strokeColor: "#7c3aed",
+          fillColor: "rgba(124, 58, 237, 0.08)",
+          unit: "/10",
+          yLabel: "Telemetry"
+        });
+      } else {
+        document.getElementById("chart-nonverbal-container").innerHTML = `
+          <div style="text-align: center; padding: 24px; color: var(--muted); font-size: 0.88rem;">
+            No video-recorded sessions in completed interviews yet.
+          </div>
+        `;
+      }
+    }
+
+    function renderSvgLineChart({ containerId, sessions, metricKey, minY, maxY, strokeColor, fillColor, unit, yLabel }) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      const validSessions = sessions.filter((s) => s[metricKey] !== null && s[metricKey] !== undefined);
+      if (validSessions.length === 0) {
+        container.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--muted); font-size: 0.85rem;">No data available.</div>`;
+        return;
+      }
+
+      const w = 580;
+      const h = 160;
+      const padLeft = 40;
+      const padRight = 30;
+      const padTop = 20;
+      const padBottom = 30;
+      const plotW = w - padLeft - padRight;
+      const plotH = h - padTop - padBottom;
+
+      const points = validSessions.map((s, idx) => {
+        const x = validSessions.length === 1
+          ? padLeft + plotW / 2
+          : padLeft + idx * (plotW / (validSessions.length - 1));
+        const val = s[metricKey];
+        const y = padTop + plotH - ((val - minY) / (maxY - minY)) * plotH;
+        return { x, y, val, sessionId: s.session_id, date: s.completed_at };
+      });
+
+      // SVG Gridlines
+      const gridTicks = [0, 2.5, 5.0, 7.5, 10.0];
+      let gridHtml = "";
+      gridTicks.forEach((tick) => {
+        const gy = padTop + plotH - ((tick - minY) / (maxY - minY)) * plotH;
+        gridHtml += `
+          <line x1="${padLeft}" y1="${gy}" x2="${w - padRight}" y2="${gy}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,3" />
+          <text x="${padLeft - 6}" y="${gy + 3}" font-size="9.5" fill="#94a3b8" text-anchor="end">${tick}</text>
+        `;
+      });
+
+      // Area Path & Line Path
+      const polyPoints = points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      let areaPath = "";
+      if (points.length > 1) {
+        const first = points[0];
+        const last = points[points.length - 1];
+        const baselineY = padTop + plotH;
+        areaPath = `<polygon points="${first.x},${baselineY} ${polyPoints} ${last.x},${baselineY}" fill="${fillColor}" />`;
+      }
+
+      // Points & Labels
+      let dotsHtml = "";
+      points.forEach((p) => {
+        dotsHtml += `
+          <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="${strokeColor}" stroke="#ffffff" stroke-width="2">
+            <title>Session #${p.sessionId}: ${p.val}${unit}</title>
+          </circle>
+          <text x="${p.x.toFixed(1)}" y="${(p.y - 7).toFixed(1)}" font-size="10.5" font-weight="bold" fill="${strokeColor}" text-anchor="middle">${p.val}</text>
+          <text x="${p.x.toFixed(1)}" y="${(h - 10).toFixed(1)}" font-size="9.5" fill="#64748b" text-anchor="middle">S#${p.sessionId}</text>
+        `;
+      });
+
+      container.innerHTML = `
+        <svg class="chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
+          ${gridHtml}
+          ${areaPath}
+          <polyline fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${polyPoints}" />
+          ${dotsHtml}
+        </svg>
+      `;
+    }
+
+    async function openSessionReview(sessionId) {
+      analyticsReviewModal.classList.remove("hidden");
+      document.getElementById("analytics-modal-title").textContent = `Reviewing Session #${sessionId}`;
+      const modalBody = document.getElementById("analytics-modal-body");
+      modalBody.innerHTML = `<p style="color: var(--muted); text-align: center; padding: 24px;">Loading session summary...</p>`;
+
+      try {
+        const summary = await fetchApi(`/sessions/${sessionId}/summary`);
+
+        let delivHtml = "";
+        if (summary.speech_summary) {
+          const sa = summary.speech_summary;
+          delivHtml = `
+            <div class="stat-card" style="margin: 0;">
+              <p>Speech Delivery</p>
+              <strong style="color: #0d9488;">${sa.average_delivery_score} / 10</strong>
+              <div class="metric-sub" style="margin-top: 4px;">Pace: ${sa.average_speaking_rate_wpm} WPM &middot; ${sa.total_filler_words} fillers (${sa.filler_rate}%)</div>
+            </div>
+          `;
+        }
+
+        let nvHtml = "";
+        if (summary.nonverbal_summary) {
+          const nv = summary.nonverbal_summary;
+          nvHtml = `
+            <div class="stat-card" style="margin: 0;">
+              <p>Nonverbal Telemetry</p>
+              <strong style="color: #6d28d9;">${nv.average_nonverbal_score} / 10</strong>
+              <div class="metric-sub" style="margin-top: 4px;">Presence: ${Math.round(nv.average_face_detected_ratio * 100)}% &middot; Offset: ${Number(nv.average_centering_offset).toFixed(2)}</div>
+            </div>
+          `;
+        }
+
+        let turnsHtml = "";
+        (summary.score_breakdown || []).forEach((t) => {
+          turnsHtml += `
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 10px; font-weight: bold; vertical-align: top;">#${t.turn_number}</td>
+              <td style="padding: 10px; vertical-align: top;">
+                <span class="badge ${t.is_follow_up ? "badge-followup" : "badge-bank"}">${t.is_follow_up ? "Follow-Up" : "Bank"}</span>
+              </td>
+              <td style="padding: 10px; vertical-align: top;">
+                <div style="font-weight: 500; margin-bottom: 6px;">${t.question}</div>
+                ${t.answer ? `<div style="font-style: italic; color: var(--muted); font-size: 0.85rem; margin-bottom: 6px;">&ldquo;${t.answer}&rdquo;</div>` : ""}
+                ${t.technical_accuracy ? `<div style="font-size: 0.82rem; color: #1e3a5f; margin-top: 4px;"><strong>Assessment:</strong> ${t.technical_accuracy}</div>` : ""}
+              </td>
+              <td style="padding: 10px; font-weight: bold; font-size: 1.05rem; vertical-align: top;">${t.score} / 10</td>
+            </tr>
+          `;
+        });
+
+        const completedDateStr = summary.completed_at
+          ? new Date(summary.completed_at).toLocaleString()
+          : "N/A";
+
+        modalBody.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <span style="font-size: 0.9rem; color: var(--muted);">Domain:</span> <strong>${summary.category || "General"}</strong> &middot;
+              <span style="font-size: 0.9rem; color: var(--muted);">Difficulty:</span> <strong style="text-transform: capitalize;">${summary.difficulty || "medium"}</strong> &middot;
+              <span style="font-size: 0.9rem; color: var(--muted);">Completed:</span> <strong>${completedDateStr}</strong>
+            </div>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+            <div style="font-size: 0.8rem; color: var(--muted); font-weight: bold; text-transform: uppercase;">Overall Recommendation</div>
+            <div style="font-weight: 600; font-size: 1.05rem; color: #1e3a5f; margin-top: 2px;">${summary.overall_recommendation}</div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px;">
+            <div class="stat-card" style="margin: 0;">
+              <p>Technical Average</p>
+              <strong style="color: var(--blue);">${summary.average_score} / 10</strong>
+              <div class="metric-sub" style="margin-top: 4px;">${summary.total_turns_evaluated} questions evaluated (${summary.follow_up_questions_count} follow-ups)</div>
+            </div>
+            ${delivHtml}
+            ${nvHtml}
+          </div>
+
+          <h3 style="margin: 16px 0 8px 0; font-size: 1rem;">Turn-by-Turn Assessment</h3>
+          <table class="turn-history-table" style="width: 100%; border-collapse: collapse; margin-bottom: 18px;">
+            <thead>
+              <tr style="background: #f1f5f9;">
+                <th style="padding: 8px; text-align: left;">Turn</th>
+                <th style="padding: 8px; text-align: left;">Type</th>
+                <th style="padding: 8px; text-align: left;">Question & Feedback</th>
+                <th style="padding: 8px; text-align: left;">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${turnsHtml}
+            </tbody>
+          </table>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+            <div class="callout-card callout-strong">
+              <h3>Top Strengths</h3>
+              <ul class="feedback-list">
+                ${(summary.top_strengths || []).map((s) => `<li>${s}</li>`).join("") || "<li>No specific strengths recorded.</li>"}
+              </ul>
+            </div>
+            <div class="callout-card callout-focus">
+              <h3>Areas for Candidate Growth</h3>
+              <ul class="feedback-list" style="color: #9f1239;">
+                ${(summary.key_areas_for_improvement || []).map((a) => `<li>${a}</li>`).join("") || "<li>No specific improvements needed.</li>"}
+              </ul>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        modalBody.innerHTML = `<p style="color: var(--error);">Error loading session summary: ${err.message}</p>`;
+      }
+    }
+    window.openSessionReview = openSessionReview;
+
+    function closeSessionReview() {
+      analyticsReviewModal.classList.add("hidden");
     }
 
     function setStatus(message, isError = false) {
