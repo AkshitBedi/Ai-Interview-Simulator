@@ -658,13 +658,17 @@ def get_answer_feedback(answer_id: int):
 
 class SessionCreate(BaseModel):
     category: str | None = None
+    categories: list[str] | None = None
     difficulty: Literal["beginner", "medium", "hard"] | None = None
     max_turns: int = Field(default=5, ge=1, le=20)
+    target_role: str | None = None
+    experience_level: Literal["junior", "mid", "senior"] | None = "mid"
+    interviewer_style: Literal["professional", "conversational", "strict"] | None = "professional"
 
 
 class SessionAnswerSubmission(BaseModel):
     answer: str = Field(min_length=10)
-    interviewer_style: str | None = Field(default="professional")
+    interviewer_style: Literal["professional", "conversational", "strict"] | None = None
 
 
 @app.post("/sessions", status_code=201)
@@ -674,8 +678,12 @@ def create_session(session_data: SessionCreate):
         result = start_session(
             connection=connection,
             category=session_data.category,
+            categories=session_data.categories,
             difficulty=session_data.difficulty,
-            max_turns=session_data.max_turns
+            max_turns=session_data.max_turns,
+            target_role=session_data.target_role,
+            experience_level=session_data.experience_level,
+            interviewer_style=session_data.interviewer_style
         )
     except ValueError as e:
         connection.close()
@@ -719,9 +727,15 @@ def submit_session_answer(session_id: int, submission: SessionAnswerSubmission):
 
     pending_turn = connection.execute(
         """
-        SELECT st.*, q.category AS q_cat, q.difficulty AS q_diff
+        SELECT st.*,
+               q.category AS q_cat,
+               q.difficulty AS q_diff,
+               parent_q.category AS parent_category,
+               parent_q.difficulty AS parent_difficulty
         FROM session_turns st
         LEFT JOIN questions q ON q.id = st.question_id
+        LEFT JOIN session_turns parent_st ON st.parent_turn_id = parent_st.id
+        LEFT JOIN questions parent_q ON parent_st.question_id = parent_q.id
         WHERE st.session_id = ? AND st.status = 'pending'
         ORDER BY st.turn_number ASC LIMIT 1
         """,
@@ -736,8 +750,8 @@ def submit_session_answer(session_id: int, submission: SessionAnswerSubmission):
         )
 
     # Determine topic & difficulty for evaluation context
-    cat = pending_turn["q_cat"] or session_row["category"] or "Technical"
-    diff = pending_turn["q_diff"] or session_row["difficulty"] or "medium"
+    cat = pending_turn["q_cat"] or pending_turn["parent_category"] or session_row["category"] or "Technical"
+    diff = pending_turn["q_diff"] or pending_turn["parent_difficulty"] or session_row["difficulty"] or "medium"
 
     # Context-aware evaluation: Evaluates both question and answer!
     evaluation = evaluate_interview_answer(
@@ -815,7 +829,7 @@ def get_session_coaching_endpoint(session_id: int):
 async def submit_session_audio_answer(
     session_id: int,
     file: UploadFile = File(...),
-    interviewer_style: str = Form("professional")
+    interviewer_style: str | None = Form(None)
 ):
     """
     Submits a spoken audio answer (PCM WAV) to the active turn of an interview session.
@@ -841,9 +855,15 @@ async def submit_session_audio_answer(
 
     pending_turn = connection.execute(
         """
-        SELECT st.*, q.category AS q_cat, q.difficulty AS q_diff
+        SELECT st.*,
+               q.category AS q_cat,
+               q.difficulty AS q_diff,
+               parent_q.category AS parent_category,
+               parent_q.difficulty AS parent_difficulty
         FROM session_turns st
         LEFT JOIN questions q ON q.id = st.question_id
+        LEFT JOIN session_turns parent_st ON st.parent_turn_id = parent_st.id
+        LEFT JOIN questions parent_q ON parent_st.question_id = parent_q.id
         WHERE st.session_id = ? AND st.status = 'pending'
         ORDER BY st.turn_number ASC LIMIT 1
         """,
@@ -939,8 +959,8 @@ async def submit_session_audio_answer(
         }
 
         # 4. Context-aware technical evaluation on the transcript
-        cat = pending_turn["q_cat"] or session_row["category"] or "Technical"
-        diff = pending_turn["q_diff"] or session_row["difficulty"] or "medium"
+        cat = pending_turn["q_cat"] or pending_turn["parent_category"] or session_row["category"] or "Technical"
+        diff = pending_turn["q_diff"] or pending_turn["parent_difficulty"] or session_row["difficulty"] or "medium"
 
         evaluation = evaluate_interview_answer(
             question=pending_turn["question_text"],
@@ -1065,7 +1085,7 @@ async def submit_session_multimodal_answer(
     session_id: int,
     audio_file: UploadFile = File(...),
     video_file: UploadFile = File(...),
-    interviewer_style: str = Form("professional")
+    interviewer_style: str | None = Form(None)
 ):
     """
     Submits a multimodal answer (16kHz PCM WAV audio + WebM/MP4 video) to the active turn.
@@ -1092,9 +1112,15 @@ async def submit_session_multimodal_answer(
 
     pending_turn = connection.execute(
         """
-        SELECT st.*, q.category AS q_cat, q.difficulty AS q_diff
+        SELECT st.*,
+               q.category AS q_cat,
+               q.difficulty AS q_diff,
+               parent_q.category AS parent_category,
+               parent_q.difficulty AS parent_difficulty
         FROM session_turns st
         LEFT JOIN questions q ON q.id = st.question_id
+        LEFT JOIN session_turns parent_st ON st.parent_turn_id = parent_st.id
+        LEFT JOIN questions parent_q ON parent_st.question_id = parent_q.id
         WHERE st.session_id = ? AND st.status = 'pending'
         ORDER BY st.turn_number ASC LIMIT 1
         """,
@@ -1223,8 +1249,8 @@ async def submit_session_multimodal_answer(
             )
 
         # 5. Technical AI evaluation on transcript text
-        cat = pending_turn["q_cat"] or session_row["category"] or "Technical"
-        diff = pending_turn["q_diff"] or session_row["difficulty"] or "medium"
+        cat = pending_turn["q_cat"] or pending_turn["parent_category"] or session_row["category"] or "Technical"
+        diff = pending_turn["q_diff"] or pending_turn["parent_difficulty"] or session_row["difficulty"] or "medium"
 
         evaluation = evaluate_interview_answer(
             question=pending_turn["question_text"],

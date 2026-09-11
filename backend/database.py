@@ -205,9 +205,28 @@ def create_tables():
             current_turn INTEGER NOT NULL DEFAULT 1,
             max_turns INTEGER NOT NULL DEFAULT 5,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            completed_at TIMESTAMP
+            completed_at TIMESTAMP,
+            target_role TEXT DEFAULT NULL,
+            experience_level TEXT DEFAULT 'mid',
+            selected_categories TEXT DEFAULT NULL,
+            interviewer_style TEXT DEFAULT 'professional'
         )
     """)
+
+    # Migrate existing interview_sessions table to include Phase 11 columns
+    session_cols = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(interview_sessions)").fetchall()
+    }
+    phase11_cols = [
+        ("target_role", "TEXT DEFAULT NULL"),
+        ("experience_level", "TEXT DEFAULT 'mid'"),
+        ("selected_categories", "TEXT DEFAULT NULL"),
+        ("interviewer_style", "TEXT DEFAULT 'professional'"),
+    ]
+    for col_name, col_def in phase11_cols:
+        if col_name not in session_cols:
+            connection.execute(f"ALTER TABLE interview_sessions ADD COLUMN {col_name} {col_def}")
 
     connection.execute(
         "CREATE INDEX IF NOT EXISTS idx_sessions_status ON interview_sessions(status)"

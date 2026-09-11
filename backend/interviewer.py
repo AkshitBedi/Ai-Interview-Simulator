@@ -161,7 +161,9 @@ def build_interviewer_context(
     next_category: str | None,
     next_difficulty: str | None,
     next_question_text: str | None,
-    recent_turns: list[dict] | None = None
+    recent_turns: list[dict] | None = None,
+    target_role: str | None = None,
+    experience_level: str | None = None
 ) -> dict:
     """
     Builds a strictly bounded context payload for the interviewer prompt.
@@ -214,7 +216,9 @@ def build_interviewer_context(
         "next_difficulty": next_difficulty or "medium",
         "next_question_text": q_next,
         "next_question_preview": q_next,  # backwards-compatible alias
-        "recent_history": compact_history
+        "recent_history": compact_history,
+        "target_role": target_role,
+        "experience_level": experience_level
     }
 
     # 2. Hard serialized UTF-8 byte enforcement (<= 4096 bytes)
@@ -461,6 +465,8 @@ TONE & STYLE:
 {tone_guide}
 
 INTERVIEW CONTEXT:
+- Target Role: {context.get("target_role") or "Software Engineer"}
+- Candidate Experience Level: {context.get("experience_level") or "mid"}
 - Previous Question Domain: {context.get("current_category")} ({context.get("current_difficulty")})
 - Previous Question: {context.get("current_question")}
 <candidate_answer_untrusted_data>

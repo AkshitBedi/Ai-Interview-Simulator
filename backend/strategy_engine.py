@@ -13,6 +13,7 @@ Handles:
 - Comprehensive turn decision making
 """
 
+import json
 import math
 import sqlite3
 from typing import Any, Literal
@@ -196,20 +197,55 @@ def build_interview_state(connection, session_id: int) -> dict:
     used_question_ids = {t["question_id"] for t in turns_rows if t["question_id"] is not None}
 
     # Determine available categories
-    configured_category = session_row["category"]
-    if configured_category and configured_category not in ("All", "all", ""):
-        available_categories = [configured_category]
+    raw_selected = (
+        session_row["selected_categories"]
+        if "selected_categories" in session_row.keys()
+        else None
+    )
+    if raw_selected:
+        try:
+            parsed = json.loads(raw_selected)
+            if isinstance(parsed, list):
+                # Preserve canonical order among selected categories
+                canonical_selected = [c for c in CANONICAL_CATEGORIES if c in parsed]
+                # If synthetic test fixture categories exist (e.g. SQL, CatA), also allow them
+                if not canonical_selected:
+                    canonical_selected = [c for c in parsed if isinstance(c, str) and c.strip()]
+                if not canonical_selected:
+                    raise ValueError(f"No valid categories found in selected_categories: {parsed}")
+                available_categories = canonical_selected
+            else:
+                raise ValueError("selected_categories must be a JSON array")
+        except json.JSONDecodeError:
+            raise ValueError(f"Invalid JSON in selected_categories: {raw_selected}")
     else:
-        cat_rows = connection.execute(
-            "SELECT DISTINCT category FROM questions WHERE category IS NOT NULL AND TRIM(category) != '' AND LOWER(TRIM(category)) != 'string' ORDER BY category ASC"
-        ).fetchall()
-        db_categories = [r["category"] for r in cat_rows]
-
-        canonical_in_db = [c for c in db_categories if c in CANONICAL_CATEGORIES]
-        if canonical_in_db and not any(c in db_categories for c in ("SQL", "FastAPI", "CatA", "CatB", "CatC", "CatD")):
-            available_categories = canonical_in_db
+        # Fallback to legacy category
+        configured_category = session_row["category"]
+        if configured_category and configured_category not in ("All", "all", ""):
+            if configured_category in ("Custom", "Multi-Category"):
+                raise ValueError(
+                    f"Desynchronization error: Category '{configured_category}' cannot be used without selected_categories."
+                )
+            cat_rows = connection.execute(
+                "SELECT DISTINCT category FROM questions WHERE category IS NOT NULL AND TRIM(category) != '' AND LOWER(TRIM(category)) != 'string' ORDER BY category ASC"
+            ).fetchall()
+            db_categories = [r["category"] for r in cat_rows]
+            if configured_category not in db_categories and configured_category not in CANONICAL_CATEGORIES:
+                raise ValueError(
+                    f"Desynchronization error: Invalid category configuration '{configured_category}' is neither a canonical category nor present in questions bank."
+                )
+            available_categories = [configured_category]
         else:
-            available_categories = db_categories
+            cat_rows = connection.execute(
+                "SELECT DISTINCT category FROM questions WHERE category IS NOT NULL AND TRIM(category) != '' AND LOWER(TRIM(category)) != 'string' ORDER BY category ASC"
+            ).fetchall()
+            db_categories = [r["category"] for r in cat_rows]
+
+            canonical_in_db = [c for c in db_categories if c in CANONICAL_CATEGORIES]
+            if canonical_in_db and not any(c in db_categories for c in ("SQL", "FastAPI", "CatA", "CatB", "CatC", "CatD")):
+                available_categories = canonical_in_db
+            else:
+                available_categories = db_categories
 
     categories_state: dict[str, dict] = {}
     for cat in available_categories:
@@ -251,6 +287,7 @@ def build_interview_state(connection, session_id: int) -> dict:
     return {
         "session_id": session_row["id"],
         "session_category": session_row["category"],
+        "selected_categories": json.loads(session_row["selected_categories"]) if ("selected_categories" in session_row.keys() and session_row["selected_categories"]) else None,
         "session_difficulty": session_row["difficulty"],
         "status": session_row["status"],
         "max_turns": max_turns,

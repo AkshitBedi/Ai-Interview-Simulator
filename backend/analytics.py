@@ -32,7 +32,9 @@ def _resolve_effective_category(
     if parent_category and parent_category.strip():
         return parent_category.strip()
     if session_category and session_category.strip():
-        return session_category.strip()
+        sess_cat = session_category.strip()
+        if sess_cat not in ("Multi-Category", "Custom", "All", "all"):
+            return sess_cat
     return "General"
 
 

@@ -24,6 +24,11 @@ try:
 except (ImportError, ValueError):
     import interviewer
 
+try:
+    from .question_bank import CANONICAL_CATEGORIES
+except (ImportError, ValueError):
+    from question_bank import CANONICAL_CATEGORIES
+
 
 def select_next_bank_question(connection, session_id: int, category: str | None = None, difficulty: str | None = None):
     """
@@ -163,24 +168,152 @@ Return ONLY the follow-up question text with no preface or quotes.
         return f"Could you provide a concrete production example or discuss the performance trade-offs of your approach?"
 
 
+def normalize_session_configuration(
+    category: str | None = None,
+    categories: list[str] | None = None,
+    target_role: str | None = None,
+    experience_level: str | None = "mid",
+    interviewer_style: str | None = "professional"
+) -> tuple[str | None, list[str], str | None, str, str]:
+    """
+    Normalizes Phase 11 interview session configuration parameters.
+    Returns: (stored_category, normalized_selected_categories, clean_target_role, clean_experience_level, clean_interviewer_style)
+    """
+    # 1. Target Role
+    if target_role is not None:
+        r = str(target_role).strip()
+        if len(r) > 100:
+            raise ValueError("target_role cannot exceed 100 characters")
+        clean_role = r if r else None
+    else:
+        clean_role = None
+
+    # 2. Experience Level
+    if experience_level is None:
+        clean_exp = "mid"
+    else:
+        exp = str(experience_level).strip().lower()
+        if exp not in ("junior", "mid", "senior"):
+            raise ValueError(f"Invalid experience_level '{experience_level}'. Must be 'junior', 'mid', or 'senior'")
+        clean_exp = exp
+
+    # 3. Interviewer Style
+    if interviewer_style is None:
+        clean_style = "professional"
+    else:
+        style = str(interviewer_style).strip().lower()
+        if style not in ("professional", "conversational", "strict"):
+            raise ValueError(f"Invalid interviewer_style '{interviewer_style}'. Must be 'professional', 'conversational', or 'strict'")
+        clean_style = style
+
+    # 4. Category Normalization
+    if categories is not None:
+        if not isinstance(categories, list):
+            raise ValueError("categories must be a list of strings")
+        if len(categories) == 0:
+            raise ValueError("categories list cannot be empty. Specify at least one category or use 'All'.")
+
+        cleaned = [c.strip() for c in categories if isinstance(c, str)]
+        if not cleaned:
+            raise ValueError("categories list cannot be empty. Specify at least one category or use 'All'.")
+
+        has_all = any(c.lower() == "all" for c in cleaned)
+        if has_all:
+            if len(cleaned) > 1:
+                raise ValueError("Cannot combine 'All' with specific categories in categories list.")
+            normalized_selected = list(CANONICAL_CATEGORIES)
+            stored_category = "All"
+        else:
+            # Check for invalid categories
+            for c in cleaned:
+                if c not in CANONICAL_CATEGORIES:
+                    raise ValueError(f"Invalid category '{c}'. Must be one of {CANONICAL_CATEGORIES}")
+
+            # Deduplicate preserving canonical order
+            deduped = [c for c in CANONICAL_CATEGORIES if c in cleaned]
+            if len(deduped) == 1:
+                normalized_selected = deduped
+                stored_category = deduped[0]
+            else:
+                normalized_selected = deduped
+                stored_category = None  # Multiple custom categories: category = NULL
+
+        # Check for conflicting legacy category and new categories inputs
+        if category is not None and category.strip():
+            cat_c = category.strip()
+            if cat_c.lower() == "all":
+                if not has_all:
+                    raise ValueError("Conflicting category inputs: category='All' conflicts with specific categories.")
+            else:
+                if normalized_selected != [cat_c]:
+                    raise ValueError(f"Conflicting category inputs: category='{cat_c}' conflicts with categories={categories}.")
+    else:
+        if category is None or category.strip() in ("", "All", "all"):
+            normalized_selected = list(CANONICAL_CATEGORIES)
+            stored_category = "All"
+        else:
+            cat_clean = category.strip()
+            if cat_clean in ("Custom", "Multi-Category"):
+                raise ValueError(f"Invalid category configuration: '{cat_clean}' cannot be used as a runtime category.")
+            if cat_clean not in CANONICAL_CATEGORIES and cat_clean not in ("SQL", "FastAPI", "CatA", "CatB", "CatC", "CatD"):
+                raise ValueError(f"Invalid category '{cat_clean}'. Must be one of {CANONICAL_CATEGORIES} or 'All'")
+            normalized_selected = [cat_clean]
+            stored_category = cat_clean
+
+    return stored_category, normalized_selected, clean_role, clean_exp, clean_style
+
+
 def start_session(
     connection,
     category: str | None = None,
     difficulty: str | None = None,
-    max_turns: int = 5
+    max_turns: int = 5,
+    categories: list[str] | None = None,
+    target_role: str | None = None,
+    experience_level: str | None = "mid",
+    interviewer_style: str | None = "professional"
 ) -> dict:
     """
     Initializes a new interview session and selects the first question deterministically via strategy_engine.
     """
     canonical_diff = strategy_engine.normalize_difficulty(difficulty) if difficulty else None
 
-    cursor = connection.execute(
-        """
-        INSERT INTO interview_sessions (category, difficulty, max_turns, status, current_turn)
-        VALUES (?, ?, ?, 'active', 1)
-        """,
-        (category, canonical_diff, max_turns)
+    stored_category, normalized_selected, clean_role, clean_exp, clean_style = normalize_session_configuration(
+        category=category,
+        categories=categories,
+        target_role=target_role,
+        experience_level=experience_level,
+        interviewer_style=interviewer_style
     )
+
+    cols = {row["name"] for row in connection.execute("PRAGMA table_info(interview_sessions)").fetchall()}
+    if "selected_categories" in cols:
+        cursor = connection.execute(
+            """
+            INSERT INTO interview_sessions (
+                category, difficulty, max_turns, status, current_turn,
+                target_role, experience_level, selected_categories, interviewer_style
+            )
+            VALUES (?, ?, ?, 'active', 1, ?, ?, ?, ?)
+            """,
+            (
+                stored_category,
+                canonical_diff,
+                max_turns,
+                clean_role,
+                clean_exp,
+                json.dumps(normalized_selected),
+                clean_style
+            )
+        )
+    else:
+        cursor = connection.execute(
+            """
+            INSERT INTO interview_sessions (category, difficulty, max_turns, status, current_turn)
+            VALUES (?, ?, ?, 'active', 1)
+            """,
+            (stored_category, canonical_diff, max_turns)
+        )
     session_id = cursor.lastrowid
 
     # Select first bank question via deterministic strategy engine
@@ -203,11 +336,15 @@ def start_session(
 
     return {
         "session_id": session_id,
-        "category": category,
+        "category": stored_category,
         "difficulty": difficulty,
         "max_turns": max_turns,
         "status": "active",
         "current_turn": 1,
+        "target_role": clean_role,
+        "experience_level": clean_exp,
+        "selected_categories": normalized_selected,
+        "interviewer_style": clean_style,
         "question": {
             "turn_id": turn_cursor.lastrowid,
             "turn_number": 1,
@@ -359,6 +496,10 @@ def get_session_details(connection, session_id: int) -> dict | None:
         "max_turns": session_row["max_turns"],
         "created_at": session_row["created_at"],
         "completed_at": session_row["completed_at"],
+        "target_role": session_row["target_role"] if ("target_role" in session_row.keys() and session_row["target_role"]) else None,
+        "experience_level": session_row["experience_level"] if ("experience_level" in session_row.keys() and session_row["experience_level"]) else "mid",
+        "selected_categories": json.loads(session_row["selected_categories"]) if ("selected_categories" in session_row.keys() and session_row["selected_categories"]) else None,
+        "interviewer_style": session_row["interviewer_style"] if ("interviewer_style" in session_row.keys() and session_row["interviewer_style"]) else "professional",
         "active_question": active_turn,
         "turns": turns
     }
@@ -371,7 +512,7 @@ def record_answer_and_advance(
     evaluation,
     speech_metrics: dict | None = None,
     nonverbal_metrics: dict | None = None,
-    interviewer_style: str | None = "professional"
+    interviewer_style: str | None = None
 ) -> dict:
     """
     Records the candidate's answer for the active turn, persists the evaluation,
@@ -389,11 +530,20 @@ def record_answer_and_advance(
     if session_row["status"] != "active":
         raise ValueError("This interview session is already completed or inactive.")
 
+    sess_style = session_row["interviewer_style"] if ("interviewer_style" in session_row.keys() and session_row["interviewer_style"]) else "professional"
+    effective_style = interviewer_style or sess_style or "professional"
+
     pending_turn = connection.execute(
         """
-        SELECT st.*, q.category as question_category, q.difficulty as question_difficulty
+        SELECT st.*,
+               q.category as question_category,
+               q.difficulty as question_difficulty,
+               parent_q.category as parent_category,
+               parent_q.difficulty as parent_difficulty
         FROM session_turns st
         LEFT JOIN questions q ON st.question_id = q.id
+        LEFT JOIN session_turns parent_st ON st.parent_turn_id = parent_st.id
+        LEFT JOIN questions parent_q ON parent_st.question_id = parent_q.id
         WHERE st.session_id = ? AND st.status = 'pending'
         ORDER BY st.turn_number ASC LIMIT 1
         """,
@@ -554,7 +704,7 @@ def record_answer_and_advance(
             "next_question": None,
             "interviewer_response": None,
             "interviewer_response_type": None,
-            "interviewer_style": interviewer_style or "professional"
+            "interviewer_style": effective_style
         }
 
     # Bounded prior turns for interviewer context (recent 2 turns)
@@ -571,8 +721,18 @@ def record_answer_and_advance(
     ).fetchall()
     recent_turns = [dict(r) for r in prev_turns_rows]
 
-    current_cat = pending_turn["question_category"] or session_row["category"] or "Technical"
-    current_diff = pending_turn["question_difficulty"] or session_row["difficulty"] or "medium"
+    current_cat = (
+        pending_turn["question_category"]
+        or pending_turn["parent_category"]
+        or session_row["category"]
+        or "Technical"
+    )
+    current_diff = (
+        pending_turn["question_difficulty"]
+        or pending_turn["parent_difficulty"]
+        or session_row["difficulty"]
+        or "medium"
+    )
 
     # 6. Apply Follow-Up Decision Rules:
     # Rule A: Circuit Breaker - At most 1 consecutive follow-up
@@ -592,16 +752,22 @@ def record_answer_and_advance(
     next_turn_num = current_turn_num + 1
 
     if should_ask_follow_up:
-        # Determine category and difficulty for context
-        cat = session_row["category"] or "Technical"
-        diff = strategy_engine.normalize_difficulty(session_row["difficulty"])
+        # Determine category and difficulty for context:
+        # Follow-up MUST inherit the canonical category of the question being probed!
+        follow_up_cat = (
+            pending_turn["question_category"]
+            or pending_turn["parent_category"]
+            or session_row["category"]
+            or "Technical"
+        )
+        diff = strategy_engine.normalize_difficulty(current_diff)
 
         follow_up_text = generate_follow_up_question(
             original_question=pending_turn["question_text"],
             candidate_answer=answer_text,
             evaluation_feedback=evaluation.feedback,
             missing_points=evaluation.missing_points,
-            category=cat,
+            category=follow_up_cat,
             difficulty=diff
         )
 
@@ -630,24 +796,26 @@ def record_answer_and_advance(
             evaluation_feedback=evaluation.feedback,
             missing_points=evaluation.missing_points,
             strategy_action="follow_up",
-            next_category=current_cat,
+            next_category=follow_up_cat,
             next_difficulty=diff,
             next_question_text=follow_up_text,
-            recent_turns=recent_turns
+            recent_turns=recent_turns,
+            target_role=session_row["target_role"] if "target_role" in session_row.keys() else None,
+            experience_level=session_row["experience_level"] if "experience_level" in session_row.keys() else "mid"
         )
         try:
             interviewer_out = interviewer.generate_interviewer_response(
                 context=interviewer_ctx,
                 action="follow_up",
                 is_same_category=True,
-                style=interviewer_style or "professional"
+                style=effective_style
             )
         except Exception:
             interviewer_out = interviewer.get_deterministic_fallback(
                 action="follow_up",
                 is_same_category=True,
-                style=interviewer_style or "professional",
-                next_category=current_cat,
+                style=effective_style,
+                next_category=follow_up_cat,
                 missing_points=evaluation.missing_points
             )
 
@@ -660,7 +828,7 @@ def record_answer_and_advance(
             "decision": "follow_up",
             "interviewer_response": interviewer_out.get("interviewer_response"),
             "interviewer_response_type": interviewer_out.get("response_type"),
-            "interviewer_style": interviewer_style or "professional",
+            "interviewer_style": effective_style,
             "next_question": {
                 "turn_id": turn_cursor.lastrowid,
                 "turn_number": next_turn_num,
@@ -705,20 +873,22 @@ def record_answer_and_advance(
                 next_category=next_cat,
                 next_difficulty=next_bank_q["difficulty"],
                 next_question_text=next_bank_q["question"],
-                recent_turns=recent_turns
+                recent_turns=recent_turns,
+                target_role=session_row["target_role"] if "target_role" in session_row.keys() else None,
+                experience_level=session_row["experience_level"] if "experience_level" in session_row.keys() else "mid"
             )
             try:
                 interviewer_out = interviewer.generate_interviewer_response(
                     context=interviewer_ctx,
                     action="new_bank_question",
                     is_same_category=is_same_cat,
-                    style=interviewer_style or "professional"
+                    style=effective_style
                 )
             except Exception:
                 interviewer_out = interviewer.get_deterministic_fallback(
                     action="new_bank_question",
                     is_same_category=is_same_cat,
-                    style=interviewer_style or "professional",
+                    style=effective_style,
                     next_category=next_cat
                 )
 
@@ -732,7 +902,7 @@ def record_answer_and_advance(
                 "strategy": strategy_decision,
                 "interviewer_response": interviewer_out.get("interviewer_response"),
                 "interviewer_response_type": interviewer_out.get("response_type"),
-                "interviewer_style": interviewer_style or "professional",
+                "interviewer_style": effective_style,
                 "next_question": {
                     "turn_id": turn_cursor.lastrowid,
                     "turn_number": next_turn_num,
@@ -800,6 +970,12 @@ def get_session_summary(connection, session_id: int) -> dict | None:
         return {
             "session_id": session_id,
             "status": session["status"],
+            "category": session["category"],
+            "difficulty": session["difficulty"],
+            "target_role": session["target_role"] if ("target_role" in session.keys() and session["target_role"]) else None,
+            "experience_level": session["experience_level"] if ("experience_level" in session.keys() and session["experience_level"]) else "mid",
+            "selected_categories": json.loads(session["selected_categories"]) if ("selected_categories" in session.keys() and session["selected_categories"]) else None,
+            "interviewer_style": session["interviewer_style"] if ("interviewer_style" in session.keys() and session["interviewer_style"]) else "professional",
             "total_turns": 0,
             "average_score": 0.0,
             "categories_covered": state["categories_covered"],
@@ -942,6 +1118,12 @@ def get_session_summary(connection, session_id: int) -> dict | None:
     return {
         "session_id": session_id,
         "status": session["status"],
+        "category": session["category"],
+        "difficulty": session["difficulty"],
+        "target_role": session["target_role"] if ("target_role" in session.keys() and session["target_role"]) else None,
+        "experience_level": session["experience_level"] if ("experience_level" in session.keys() and session["experience_level"]) else "mid",
+        "selected_categories": json.loads(session["selected_categories"]) if ("selected_categories" in session.keys() and session["selected_categories"]) else None,
+        "interviewer_style": session["interviewer_style"] if ("interviewer_style" in session.keys() and session["interviewer_style"]) else "professional",
         "total_turns_evaluated": len(evaluated_turns),
         "bank_questions_count": bank_count,
         "follow_up_questions_count": follow_up_count,

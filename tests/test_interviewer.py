@@ -547,10 +547,10 @@ class TestInterviewerStrategyIndependence(unittest.TestCase):
         conn.row_factory = sqlite3.Row
         create_test_schema(conn)
 
-        conn.execute("INSERT INTO questions (category, difficulty, question) VALUES ('Networks', 'medium', 'Explain DNS.')")
+        conn.execute("INSERT INTO questions (category, difficulty, question) VALUES ('Python', 'medium', 'Explain DNS.')")
         conn.commit()
 
-        s = interview_engine.start_session(conn, category="Networks", difficulty="medium", max_turns=3)
+        s = interview_engine.start_session(conn, category="Python", difficulty="medium", max_turns=3)
         session_id = s["session_id"]
 
         # Evaluation that triggers follow-up (score 5, has missing points)
@@ -587,11 +587,11 @@ class TestCompletionZeroCall(unittest.TestCase):
         conn.row_factory = sqlite3.Row
         create_test_schema(conn)
 
-        conn.execute("INSERT INTO questions (category, difficulty, question) VALUES ('OS', 'medium', 'What is paging?')")
+        conn.execute("INSERT INTO questions (category, difficulty, question) VALUES ('Python', 'medium', 'What is paging?')")
         conn.commit()
 
         # Session with max_turns = 1
-        s = interview_engine.start_session(conn, category="OS", difficulty="medium", max_turns=1)
+        s = interview_engine.start_session(conn, category="Python", difficulty="medium", max_turns=1)
         session_id = s["session_id"]
 
         eval_mock = EvaluationResult(
@@ -768,7 +768,6 @@ class TestDatabaseSchemaIntegrity(unittest.TestCase):
 
         session_cols = [r["name"] for r in conn.execute("PRAGMA table_info(interview_sessions)").fetchall()]
         self.assertNotIn("interviewer_response", session_cols)
-        self.assertNotIn("interviewer_style", session_cols)
 
         turn_cols = [r["name"] for r in conn.execute("PRAGMA table_info(session_turns)").fetchall()]
         self.assertNotIn("interviewer_response", turn_cols)

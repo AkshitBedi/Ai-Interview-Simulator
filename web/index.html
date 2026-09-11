@@ -1039,44 +1039,86 @@
     <!-- SECTION A: MOCK INTERVIEW SESSION -->
     <div id="session-container">
       <!-- Session Setup -->
-      <section id="session-setup" class="filters">
-        <div class="field">
-          <label for="session-category">Domain / Topic</label>
-          <select id="session-category">
-            <option value="">Any Domain</option>
-          </select>
+      <section id="session-setup" class="filters" style="display: flex; flex-direction: column; gap: 16px; align-items: stretch;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+          <div class="field">
+            <label for="session-target-role">Target Role (Optional)</label>
+            <input type="text" id="session-target-role" placeholder="e.g. Backend Engineer, Python" maxlength="100" style="border: 1px solid var(--border); border-radius: 7px; padding: 10px; font: inherit;" />
+          </div>
+
+          <div class="field">
+            <label for="session-experience-level">Experience Level</label>
+            <select id="session-experience-level">
+              <option value="junior">Junior</option>
+              <option value="mid" selected>Mid-Level</option>
+              <option value="senior">Senior</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="session-difficulty">Difficulty Baseline</label>
+            <select id="session-difficulty">
+              <option value="">Any Difficulty</option>
+              <option value="beginner">Beginner</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="session-turns-select">Interview Length</label>
+            <select id="session-turns-select">
+              <option value="3">3 Questions</option>
+              <option value="4">4 Questions</option>
+              <option value="5" selected>5 Questions</option>
+              <option value="6">6 Questions</option>
+              <option value="7">7 Questions</option>
+              <option value="8">8 Questions</option>
+              <option value="10">10 Questions</option>
+              <option value="12">12 Questions</option>
+              <option value="15">15 Questions</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="session-interviewer-style">Interviewer Style</label>
+            <select id="session-interviewer-style">
+              <option value="professional" selected>Professional</option>
+              <option value="conversational">Conversational</option>
+              <option value="strict">Strict</option>
+            </select>
+          </div>
         </div>
 
         <div class="field">
-          <label for="session-difficulty">Difficulty</label>
-          <select id="session-difficulty">
-            <option value="">Any Difficulty</option>
-            <option value="beginner">Beginner</option>
-            <option value="medium" selected>Medium</option>
-            <option value="hard">Hard</option>
-          </select>
+          <label>Categories</label>
+          <div id="category-selector-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;">
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: normal; background: #f1f5f9; padding: 6px 12px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border);">
+              <input type="checkbox" id="cat-all" value="All" checked /> <strong>All Categories</strong>
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: normal; background: #f1f5f9; padding: 6px 12px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border);">
+              <input type="checkbox" class="cat-checkbox" value="Python" /> Python
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: normal; background: #f1f5f9; padding: 6px 12px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border);">
+              <input type="checkbox" class="cat-checkbox" value="Databases" /> Databases
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: normal; background: #f1f5f9; padding: 6px 12px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border);">
+              <input type="checkbox" class="cat-checkbox" value="System Design" /> System Design
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-weight: normal; background: #f1f5f9; padding: 6px 12px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border);">
+              <input type="checkbox" class="cat-checkbox" value="Behavioral" /> Behavioral
+            </label>
+          </div>
         </div>
 
-        <div class="field">
-          <label for="session-turns-select">Questions Target</label>
-          <select id="session-turns-select">
-            <option value="3">3 Questions</option>
-            <option value="5" selected>5 Questions</option>
-          </select>
-        </div>
+        <!-- Hidden legacy select to maintain backward compatibility with any scripts -->
+        <select id="session-category" class="hidden"><option value="">Any Domain</option></select>
 
-        <div class="field">
-          <label for="session-interviewer-style">Interviewer Style</label>
-          <select id="session-interviewer-style">
-            <option value="professional" selected>Professional (Balanced)</option>
-            <option value="conversational">Conversational (Warm &amp; Encouraging)</option>
-            <option value="strict">Strict (Direct &amp; Rigorous)</option>
-          </select>
+        <div>
+          <button type="button" id="start-session-button" style="width: 100%; max-width: 260px;">
+            Start Interview Session
+          </button>
         </div>
-
-        <button type="button" id="start-session-button">
-          Start Interview Session
-        </button>
       </section>
 
       <!-- Active Session Card -->
@@ -1648,9 +1690,17 @@
     const sessionDifficultySelect = document.getElementById("session-difficulty");
     const sessionTurnsSelect = document.getElementById("session-turns-select");
     const sessionInterviewerStyleSelect = document.getElementById("session-interviewer-style");
+    const sessionTargetRoleInput = document.getElementById("session-target-role");
+    const sessionExperienceLevelSelect = document.getElementById("session-experience-level");
+    const catAllCheckbox = document.getElementById("cat-all");
+    const catCheckboxes = document.querySelectorAll(".cat-checkbox");
     const sessionInterviewerBubble = document.getElementById("session-interviewer-bubble");
     const sessionInterviewerText = document.getElementById("session-interviewer-text");
     let activeInterviewerStyle = "professional";
+    let activeSessionSelectedCategories = null;
+    let activeSessionCategory = null;
+    let activeSessionTargetRole = null;
+    let activeSessionExperienceLevel = null;
     const startSessionButton = document.getElementById("start-session-button");
     const sessionActiveCard = document.getElementById("session-active");
     const sessionProgressText = document.getElementById("session-progress-text");
@@ -1737,6 +1787,27 @@
     tabSessionBtn.addEventListener("click", () => switchTab("session"));
     tabPracticeBtn.addEventListener("click", () => switchTab("practice"));
     tabAnalyticsBtn.addEventListener("click", () => switchTab("analytics"));
+
+    // Multi-Category Checkbox Synchronization
+    if (catAllCheckbox) {
+      catAllCheckbox.addEventListener("change", (e) => {
+        if (e.target.checked) {
+          catCheckboxes.forEach((cb) => (cb.checked = false));
+        }
+      });
+      catCheckboxes.forEach((cb) => {
+        cb.addEventListener("change", () => {
+          if (cb.checked) {
+            catAllCheckbox.checked = false;
+          } else {
+            const anyChecked = Array.from(catCheckboxes).some((c) => c.checked);
+            if (!anyChecked) {
+              catAllCheckbox.checked = true;
+            }
+          }
+        });
+      });
+    }
 
     startSessionButton.addEventListener("click", startSession);
     sessionSubmitButton.addEventListener("click", submitSessionAnswer);
@@ -1874,10 +1945,30 @@
       sessionEvalCard.classList.add("hidden");
 
       try {
+        const targetRoleInput = document.getElementById("session-target-role");
+        const expLevelSelect = document.getElementById("session-experience-level");
+        const roleVal = targetRoleInput ? targetRoleInput.value.trim() : "";
+        const expVal = expLevelSelect ? expLevelSelect.value : "mid";
+
+        let selectedCats = null;
+        if (catAllCheckbox && !catAllCheckbox.checked) {
+          const checked = Array.from(catCheckboxes).filter((c) => c.checked).map((c) => c.value);
+          if (checked.length > 0) {
+            selectedCats = checked;
+          }
+        }
+
+        const selectedStyle = (sessionInterviewerStyleSelect && sessionInterviewerStyleSelect.value)
+          ? sessionInterviewerStyleSelect.value
+          : "professional";
+
         const payload = {
-          category: sessionCategorySelect.value || null,
+          categories: selectedCats,
           difficulty: sessionDifficultySelect.value || null,
-          max_turns: parseInt(sessionTurnsSelect.value, 10) || 5
+          max_turns: parseInt(sessionTurnsSelect.value, 10) || 5,
+          target_role: roleVal || null,
+          experience_level: expVal,
+          interviewer_style: selectedStyle
         };
 
         const session = await fetchApi("/sessions", {
@@ -1889,7 +1980,11 @@
         activeSessionId = session.session_id;
         activeTurnNumber = session.current_turn;
         activeMaxTurns = session.max_turns;
-        activeInterviewerStyle = (sessionInterviewerStyleSelect && sessionInterviewerStyleSelect.value) ? sessionInterviewerStyleSelect.value : "professional";
+        activeInterviewerStyle = session.interviewer_style || selectedStyle;
+        activeSessionSelectedCategories = session.selected_categories || null;
+        activeSessionCategory = session.category || null;
+        activeSessionTargetRole = session.target_role || null;
+        activeSessionExperienceLevel = session.experience_level || null;
 
         displaySessionQuestion(session.question, null, null);
         document.getElementById("session-setup").classList.add("hidden");
@@ -1929,7 +2024,15 @@
     }
 
     function displaySessionQuestion(questionData, interviewerResponse = null, responseType = null) {
-      sessionProgressText.innerHTML = `<strong>Session #${activeSessionId}</strong> &middot; Turn ${activeTurnNumber} of ${activeMaxTurns}`;
+      let catDisplay = "";
+      if (activeSessionSelectedCategories && activeSessionSelectedCategories.length > 0) {
+        catDisplay = activeSessionSelectedCategories.join(", ");
+      } else if (activeSessionCategory) {
+        catDisplay = activeSessionCategory;
+      }
+      const roleDisplay = activeSessionTargetRole ? ` &middot; ${activeSessionTargetRole}` : "";
+      const catBadge = catDisplay ? ` &middot; <span style="color: var(--muted); font-weight: normal;">[${catDisplay}]</span>` : "";
+      sessionProgressText.innerHTML = `<strong>Session #${activeSessionId}</strong> &middot; Turn ${activeTurnNumber} of ${activeMaxTurns}${roleDisplay}${catBadge}`;
       
       if (questionData.is_follow_up) {
         sessionQuestionTypeBadge.className = "badge badge-followup";
@@ -2390,7 +2493,7 @@
         const formData = new FormData();
         formData.append("audio_file", recordedWavBlob, "answer.wav");
         formData.append("video_file", recordedVideoBlob, "answer.webm");
-        formData.append("interviewer_style", activeInterviewerStyle);
+        // interviewer_style omitted to allow session style precedence
 
         const response = await fetch(`${API_URL}/sessions/${activeSessionId}/answer-multimodal`, {
           method: "POST",
@@ -2454,7 +2557,7 @@
         const response = await fetchApi(`/sessions/${activeSessionId}/answer`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ answer, interviewer_style: activeInterviewerStyle })
+          body: JSON.stringify({ answer })
         });
 
         // 1. Render turn evaluation
@@ -2502,7 +2605,7 @@
       try {
         const formData = new FormData();
         formData.append("file", recordedWavBlob, "answer.wav");
-        formData.append("interviewer_style", activeInterviewerStyle);
+        // interviewer_style omitted to allow session style precedence
 
         const response = await fetch(`${API_URL}/sessions/${activeSessionId}/answer-audio`, {
           method: "POST",
@@ -3509,7 +3612,8 @@
         modalBody.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
             <div>
-              <span style="font-size: 0.9rem; color: var(--muted);">Domain:</span> <strong>${summary.category || "General"}</strong> &middot;
+              <span style="font-size: 0.9rem; color: var(--muted);">Domain:</span> <strong>${(summary.selected_categories && summary.selected_categories.length > 0) ? summary.selected_categories.join(", ") : (summary.category || "All Categories")}</strong> &middot;
+              ${summary.target_role ? `<span style="font-size: 0.9rem; color: var(--muted);">Role:</span> <strong>${summary.target_role}</strong> &middot;` : ""}
               <span style="font-size: 0.9rem; color: var(--muted);">Difficulty:</span> <strong style="text-transform: capitalize;">${summary.difficulty || "medium"}</strong> &middot;
               <span style="font-size: 0.9rem; color: var(--muted);">Completed:</span> <strong>${completedDateStr}</strong>
             </div>
