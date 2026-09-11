@@ -23,7 +23,8 @@ try:
         get_session_details,
         record_answer_and_advance,
         get_session_summary,
-        normalize_session_configuration
+        normalize_session_configuration,
+        get_session_replay
     )
     from .document_processor import extract_documents_concurrently
     from .speech_engine import transcribe_audio, TranscriptionError, is_stt_available
@@ -62,7 +63,8 @@ except (ImportError, ValueError):
         get_session_details,
         record_answer_and_advance,
         get_session_summary,
-        normalize_session_configuration
+        normalize_session_configuration,
+        get_session_replay
     )
     from document_processor import extract_documents_concurrently
     from speech_engine import transcribe_audio, TranscriptionError, is_stt_available
@@ -827,6 +829,29 @@ def get_session_summary_endpoint(session_id: int):
         raise HTTPException(status_code=404, detail="Session not found")
 
     return summary
+
+
+@app.get("/sessions/{session_id}/replay")
+def get_session_replay_endpoint(session_id: int):
+    """
+    Phase 15: Interview Replay & Detailed Session Review.
+    Reconstructs complete historical interview evidence for a completed session.
+    """
+    connection = get_db()
+    try:
+        replay = get_session_replay(connection, session_id)
+    except SessionNotFoundError as e:
+        connection.close()
+        raise HTTPException(status_code=404, detail=str(e))
+    except IncompleteSessionError as e:
+        connection.close()
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        connection.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    connection.close()
+    return replay
 
 
 @app.get("/sessions/{session_id}/coaching")

@@ -224,6 +224,12 @@
       border: 1px solid #cbd5e1;
     }
 
+    .badge-claim {
+      background: #fdf2f8;
+      color: #9d174d;
+      border: 1px solid #fbcfe8;
+    }
+
     /* Phase 8: Conversational Interviewer Bubble */
     .interviewer-bubble {
       display: flex;
@@ -1036,7 +1042,7 @@
     .modal-dialog {
       background: white;
       width: 100%;
-      max-width: 760px;
+      max-width: 920px;
       max-height: 90vh;
       border-radius: 12px;
       display: flex;
@@ -1078,6 +1084,66 @@
       padding: 20px;
       overflow-y: auto;
       flex: 1;
+    }
+
+    .replay-turn-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: border-color 0.2s;
+    }
+
+    .replay-turn-card:hover {
+      border-color: #94a3b8;
+    }
+
+    .replay-turn-child {
+      margin-left: 20px;
+      border-left: 4px solid #6366f1;
+      background: #fcfdff;
+    }
+
+    .replay-telemetry-drawer {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-top: 10px;
+      font-size: 0.88rem;
+    }
+
+    .replay-pill-green {
+      display: inline-block;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      border-radius: 6px;
+      padding: 3px 8px;
+      margin: 2px 4px 2px 0;
+      font-size: 0.82rem;
+    }
+
+    .replay-pill-red {
+      display: inline-block;
+      background: #fff1f2;
+      color: #9f1239;
+      border: 1px solid #fecdd3;
+      border-radius: 6px;
+      padding: 3px 8px;
+      margin: 2px 4px 2px 0;
+      font-size: 0.82rem;
+    }
+
+    .replay-claim-box {
+      background: #fdf2f8;
+      border: 1px solid #fbcfe8;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin: 10px 0;
+      font-size: 0.88rem;
     }
   </style>
 </head>
@@ -4035,14 +4101,25 @@
       `;
     }
 
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     async function openSessionReview(sessionId) {
       analyticsReviewModal.classList.remove("hidden");
-      document.getElementById("analytics-modal-title").textContent = `Reviewing Session #${sessionId}`;
+      document.getElementById("analytics-modal-title").textContent = `Session Replay & Detailed Review #${sessionId}`;
       const modalBody = document.getElementById("analytics-modal-body");
-      modalBody.innerHTML = `<p style="color: var(--muted); text-align: center; padding: 24px;">Loading session summary...</p>`;
+      modalBody.innerHTML = `<p style="color: var(--muted); text-align: center; padding: 24px;">Loading session replay...</p>`;
 
       try {
-        const summary = await fetchApi(`/sessions/${sessionId}/summary`);
+        const replay = await fetchApi(`/sessions/${sessionId}/replay`);
+        const summary = replay.summary || {};
 
         let delivHtml = "";
         if (summary.speech_summary) {
@@ -4069,10 +4146,10 @@
         }
 
         let adaptHtml = "";
-        if (summary.adaptive_summary || summary.difficulty_progression) {
+        if (summary.categories_covered != null || summary.difficulty_progression) {
           const prog = summary.difficulty_progression || {};
           const keys = Object.keys(prog);
-          let progBadges = keys.map((cat) => `<span style="display: inline-block; margin-right: 8px; margin-bottom: 4px; padding: 3px 8px; background: #e0e7ff; color: #3730a3; border-radius: 4px; font-size: 0.82rem;"><strong>${cat}:</strong> ${prog[cat]}</span>`).join("");
+          let progBadges = keys.map((cat) => `<span style="display: inline-block; margin-right: 8px; margin-bottom: 4px; padding: 3px 8px; background: #e0e7ff; color: #3730a3; border-radius: 4px; font-size: 0.82rem;"><strong>${escapeHtml(cat)}:</strong> ${escapeHtml(prog[cat])}</span>`).join("");
           if (!progBadges) progBadges = `<span style="color: var(--muted); font-style: italic;">No progression data</span>`;
 
           adaptHtml = `
@@ -4088,48 +4165,240 @@
           `;
         }
 
-        let turnsHtml = "";
-        (summary.score_breakdown || []).forEach((t) => {
-          turnsHtml += `
-            <tr style="border-bottom: 1px solid var(--border);">
-              <td style="padding: 10px; font-weight: bold; vertical-align: top;">#${t.turn_number}</td>
-              <td style="padding: 10px; vertical-align: top;">
-                <span class="badge ${t.is_follow_up ? "badge-followup" : "badge-bank"}">${t.is_follow_up ? "Follow-Up" : "Bank"}</span>
-              </td>
-              <td style="padding: 10px; vertical-align: top;">
-                <div style="font-weight: 500; margin-bottom: 6px;">${t.question}</div>
-                ${t.answer ? `<div style="font-style: italic; color: var(--muted); font-size: 0.85rem; margin-bottom: 6px;">&ldquo;${t.answer}&rdquo;</div>` : ""}
-                ${t.technical_accuracy ? `<div style="font-size: 0.82rem; color: #1e3a5f; margin-top: 4px;"><strong>Assessment:</strong> ${t.technical_accuracy}</div>` : ""}
-              </td>
-              <td style="padding: 10px; font-weight: bold; font-size: 1.05rem; vertical-align: top;">${t.score} / 10</td>
-            </tr>
+        let cpChipHtml = "";
+        if (replay.candidate_profile) {
+          const cp = replay.candidate_profile;
+          const parts = [];
+          if (cp.years_of_experience != null) parts.push(`${cp.years_of_experience} yrs exp`);
+          if (cp.skills && Array.isArray(cp.skills) && cp.skills.length > 0) {
+            parts.push(`Skills: ${cp.skills.slice(0, 4).map(s => escapeHtml(s)).join(", ")}${cp.skills.length > 4 ? "..." : ""}`);
+          }
+          if (cp.past_roles && Array.isArray(cp.past_roles) && cp.past_roles.length > 0) {
+            parts.push(`Roles: ${cp.past_roles.slice(0, 2).map(r => escapeHtml(r)).join(", ")}`);
+          }
+          if (cp.claims && Array.isArray(cp.claims)) {
+            parts.push(`${cp.claims.length} claim(s)`);
+          }
+          cpChipHtml = `
+            <div style="display: flex; align-items: center; gap: 6px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 6px; padding: 5px 12px; font-size: 0.82rem; margin-top: 6px;">
+              <span>&#x1F4C4; <strong>Candidate Profile:</strong></span>
+              <span>${parts.join(" &bull; ")}</span>
+            </div>
           `;
-        });
+        }
+
+        let jcChipHtml = "";
+        if (replay.job_context) {
+          const jc = replay.job_context;
+          const parts = [];
+          if (jc.title) parts.push(`<strong>${escapeHtml(jc.title)}</strong>`);
+          if (jc.seniority_level) parts.push(escapeHtml(jc.seniority_level));
+          if (jc.required_skills && Array.isArray(jc.required_skills) && jc.required_skills.length > 0) {
+            parts.push(`Skills: ${jc.required_skills.slice(0, 4).map(s => escapeHtml(s)).join(", ")}${jc.required_skills.length > 4 ? "..." : ""}`);
+          }
+          jcChipHtml = `
+            <div style="display: flex; align-items: center; gap: 6px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; border-radius: 6px; padding: 5px 12px; font-size: 0.82rem; margin-top: 6px;">
+              <span>&#x1F4BC; <strong>Target Job Context:</strong></span>
+              <span>${parts.join(" &bull; ")}</span>
+            </div>
+          `;
+        }
 
         const completedDateStr = summary.completed_at
           ? new Date(summary.completed_at).toLocaleString()
           : "N/A";
 
+        const turns = replay.turns || [];
+        let turnsTimelineHtml = "";
+
+        turns.forEach((t) => {
+          const isChild = t.parent_turn_number != null;
+          const childClass = isChild ? "replay-turn-child" : "";
+
+          let typeBadge = "";
+          if (t.turn_type === "claim_probe") {
+            typeBadge = `<span class="badge badge-claim">Resume Claim Probe</span>`;
+          } else if (t.turn_type === "remedial_follow_up") {
+            typeBadge = `<span class="badge badge-followup">Remedial Follow-up</span>`;
+          } else {
+            typeBadge = `<span class="badge badge-bank">Bank Question</span>`;
+          }
+
+          let parentLinkHtml = "";
+          if (isChild) {
+            parentLinkHtml = `
+              <div style="font-size: 0.82rem; color: #4338ca; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+                <span>&#x21B3;</span> In response to Turn #${t.parent_turn_number}
+              </div>
+            `;
+          }
+
+          let topicTierHtml = "";
+          const metaBadges = [];
+          if (t.question.category) metaBadges.push(`<span style="font-size: 0.78rem; background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px;">${escapeHtml(t.question.category)}</span>`);
+          if (t.question.difficulty) metaBadges.push(`<span style="font-size: 0.78rem; background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; text-transform: capitalize;">${escapeHtml(t.question.difficulty)}</span>`);
+          if (t.question.topic) metaBadges.push(`<span style="font-size: 0.78rem; background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px;">Topic: ${escapeHtml(t.question.topic)}</span>`);
+          if (t.question.quality_tier) metaBadges.push(`<span style="font-size: 0.78rem; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px;">Tier: ${escapeHtml(t.question.quality_tier)}</span>`);
+          if (metaBadges.length > 0) {
+            topicTierHtml = `<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">${metaBadges.join("")}</div>`;
+          }
+
+          let claimBoxHtml = "";
+          if (t.turn_type === "claim_probe") {
+            if (t.claim) {
+              claimBoxHtml = `
+                <div class="replay-claim-box">
+                  <div style="font-weight: 700; color: #9d174d; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                    <span>Targeted Resume Claim:</span> <span style="background: #fbcfe8; color: #831843; padding: 1px 6px; border-radius: 3px;">${escapeHtml(t.claim.claim_id)}</span>
+                  </div>
+                  <div style="font-weight: 500; margin-bottom: 6px; color: #1e293b;">&ldquo;${escapeHtml(t.claim.claim_statement)}&rdquo;</div>
+                  <div style="font-size: 0.82rem; color: #831843; display: flex; flex-wrap: wrap; gap: 12px;">
+                    ${t.claim.project_context ? `<span><strong>Project:</strong> ${escapeHtml(t.claim.project_context)}</span>` : ""}
+                    ${t.claim.metric_context ? `<span><strong>Metric:</strong> ${escapeHtml(t.claim.metric_context)}</span>` : ""}
+                    ${t.claim.technology_context ? `<span><strong>Tech:</strong> ${escapeHtml(t.claim.technology_context)}</span>` : ""}
+                  </div>
+                </div>
+              `;
+            } else {
+              claimBoxHtml = `
+                <div class="replay-claim-box">
+                  <div style="font-weight: 600; color: #9d174d; font-size: 0.82rem;">
+                    Resume claim verification probe (claim details not in active profile)
+                  </div>
+                </div>
+              `;
+            }
+          }
+
+          let answerHtml = "";
+          if (t.candidate_answer && t.candidate_answer.transcript) {
+            answerHtml = `
+              <div style="background: #f8fafc; border-left: 3px solid #64748b; border-radius: 0 6px 6px 0; padding: 10px 14px; margin: 10px 0; color: #334155; font-size: 0.9rem;">
+                <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Candidate Answer</div>
+                <div style="font-style: italic;">&ldquo;${escapeHtml(t.candidate_answer.transcript)}&rdquo;</div>
+                <div style="font-size: 0.78rem; color: var(--muted); margin-top: 6px;">
+                  ${t.candidate_answer.word_count != null ? `<span>${t.candidate_answer.word_count} words</span>` : ""}
+                  ${t.candidate_answer.duration_seconds != null ? ` &bull; <span>${t.candidate_answer.duration_seconds}s</span>` : ""}
+                </div>
+              </div>
+            `;
+          } else {
+            answerHtml = `<div style="color: var(--muted); font-style: italic; font-size: 0.85rem; margin: 8px 0;">No answer recorded.</div>`;
+          }
+
+          let evalHtml = "";
+          if (t.evaluation) {
+            const scoreColor = t.evaluation.score >= 7.0 ? "#15803d" : (t.evaluation.score >= 5.0 ? "#b45309" : "#b91c1c");
+            evalHtml = `
+              <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 0.82rem; font-weight: 700; color: #475569; text-transform: uppercase;">Technical Assessment</span>
+                  <span style="font-weight: 800; font-size: 1.05rem; color: ${scoreColor};">${t.evaluation.score != null ? t.evaluation.score + " / 10" : "N/A"}</span>
+                </div>
+                ${t.evaluation.technical_accuracy ? `<div style="font-size: 0.88rem; color: #1e293b; margin-bottom: 6px;"><strong>Accuracy:</strong> ${escapeHtml(t.evaluation.technical_accuracy)}</div>` : ""}
+                ${t.evaluation.strengths && t.evaluation.strengths.length > 0 ? `
+                  <div style="margin-top: 6px;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #166534; margin-bottom: 2px;">Strengths:</div>
+                    <div>${t.evaluation.strengths.map(s => `<span class="replay-pill-green">&#x2713; ${escapeHtml(s)}</span>`).join("")}</div>
+                  </div>` : ""}
+                ${t.evaluation.missing_points && t.evaluation.missing_points.length > 0 ? `
+                  <div style="margin-top: 6px;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #991b1b; margin-bottom: 2px;">Missing Points:</div>
+                    <div>${t.evaluation.missing_points.map(m => `<span class="replay-pill-red">&#x2717; ${escapeHtml(m)}</span>`).join("")}</div>
+                  </div>` : ""}
+              </div>
+            `;
+          }
+
+          let speechDrawerHtml = "";
+          if (t.speech_analytics) {
+            const sa = t.speech_analytics;
+            speechDrawerHtml = `
+              <div class="replay-telemetry-drawer" style="border-left: 3px solid #0d9488;">
+                <div style="font-weight: 700; color: #0f766e; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 4px;">Speech & Delivery Telemetry</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.85rem;">
+                  <span><strong>Score:</strong> ${sa.delivery_score ?? "N/A"} / 10</span>
+                  <span><strong>Pace:</strong> ${sa.speaking_rate_wpm ?? "N/A"} WPM ${sa.is_optimal_pace ? "(&#x2705; Optimal)" : ""}</span>
+                  <span><strong>Fillers:</strong> ${sa.filler_word_count ?? 0} (${sa.filler_word_rate_pct ?? 0}%)</span>
+                  <span><strong>Pauses:</strong> ${sa.pause_count ?? 0} (${sa.total_pause_duration_seconds ?? 0}s)</span>
+                </div>
+              </div>
+            `;
+          }
+
+          let nvDrawerHtml = "";
+          if (t.nonverbal_analytics) {
+            const nv = t.nonverbal_analytics;
+            nvDrawerHtml = `
+              <div class="replay-telemetry-drawer" style="border-left: 3px solid #7c3aed;">
+                <div style="font-weight: 700; color: #6d28d9; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 4px;">Nonverbal Telemetry</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.85rem;">
+                  <span><strong>Score:</strong> ${nv.nonverbal_score ?? "N/A"} / 10</span>
+                  <span><strong>Presence:</strong> ${nv.face_detected_ratio != null ? Math.round(nv.face_detected_ratio * 100) + "%" : "N/A"}</span>
+                  <span><strong>Centering:</strong> ${nv.centering_offset != null ? Number(nv.centering_offset).toFixed(2) : "N/A"}</span>
+                  <span><strong>Gaze:</strong> ${nv.gaze_target_score ?? "N/A"}</span>
+                  <span><strong>Motion:</strong> ${nv.motion_stability_score ?? "N/A"}</span>
+                  ${nv.flags && nv.flags.length > 0 ? `<span style="color:#b91c1c;"><strong>Flags:</strong> ${nv.flags.map(f => escapeHtml(f)).join(", ")}</span>` : ""}
+                </div>
+              </div>
+            `;
+          }
+
+          turnsTimelineHtml += `
+            <div class="replay-turn-card ${childClass}">
+              ${parentLinkHtml}
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-weight: 700; font-size: 0.95rem;">Turn #${t.turn_number}</span>
+                ${typeBadge}
+              </div>
+              ${topicTierHtml}
+              <div style="font-weight: 600; font-size: 0.98rem; color: #0f172a; margin: 8px 0 10px 0;">${escapeHtml(t.question.text)}</div>
+              ${claimBoxHtml}
+              ${answerHtml}
+              ${evalHtml}
+              ${speechDrawerHtml}
+              ${nvDrawerHtml}
+            </div>
+          `;
+        });
+
+        const coachingButtonHtml = `
+          <div style="margin-bottom: 20px;">
+            <button type="button" class="btn-page" id="btn-toggle-coaching-${sessionId}" style="padding: 8px 16px; font-size: 0.88rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #cbd5e1; background: #f8fafc;">
+              <span>&#x1F4CB;</span> <span id="coaching-btn-text-${sessionId}">View Detailed Coaching Report</span>
+            </button>
+            <div id="coaching-drawer-${sessionId}" style="display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px 18px; margin-top: 12px;">
+              <p style="color: var(--muted); font-size: 0.88rem; text-align: center;">Loading coaching report...</p>
+            </div>
+          </div>
+        `;
+
         modalBody.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
             <div>
-              <span style="font-size: 0.9rem; color: var(--muted);">Domain:</span> <strong>${(summary.selected_categories && summary.selected_categories.length > 0) ? summary.selected_categories.join(", ") : (summary.category || "All Categories")}</strong> &middot;
-              ${summary.target_role ? `<span style="font-size: 0.9rem; color: var(--muted);">Role:</span> <strong>${summary.target_role}</strong> &middot;` : ""}
-              <span style="font-size: 0.9rem; color: var(--muted);">Difficulty:</span> <strong style="text-transform: capitalize;">${summary.difficulty || "medium"}</strong> &middot;
+              <span class="badge" style="background: #dcfce7; color: #166534; font-size: 0.8rem; margin-right: 8px;">${escapeHtml(replay.status || "Completed")}</span>
+              <span style="font-size: 0.9rem; color: var(--muted);">Domain:</span> <strong>${(replay.selected_categories && replay.selected_categories.length > 0) ? replay.selected_categories.join(", ") : (replay.domain || "All Categories")}</strong> &middot;
+              ${replay.target_role ? `<span style="font-size: 0.9rem; color: var(--muted);">Role:</span> <strong>${escapeHtml(replay.target_role)}</strong> &middot;` : ""}
+              ${replay.experience_level ? `<span style="font-size: 0.9rem; color: var(--muted);">Experience:</span> <strong style="text-transform: capitalize;">${escapeHtml(replay.experience_level)}</strong> &middot;` : ""}
+              ${replay.interviewer_style ? `<span style="font-size: 0.9rem; color: var(--muted);">Style:</span> <strong style="text-transform: capitalize;">${escapeHtml(replay.interviewer_style)}</strong> &middot;` : ""}
+              <span style="font-size: 0.9rem; color: var(--muted);">Difficulty:</span> <strong style="text-transform: capitalize;">${escapeHtml(replay.difficulty || "medium")}</strong> &middot;
               <span style="font-size: 0.9rem; color: var(--muted);">Completed:</span> <strong>${completedDateStr}</strong>
             </div>
           </div>
 
-          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+          ${cpChipHtml}
+          ${jcChipHtml}
+
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 16px 0;">
             <div style="font-size: 0.8rem; color: var(--muted); font-weight: bold; text-transform: uppercase;">Overall Recommendation</div>
-            <div style="font-weight: 600; font-size: 1.05rem; color: #1e3a5f; margin-top: 2px;">${summary.overall_recommendation}</div>
+            <div style="font-weight: 600; font-size: 1.05rem; color: #1e3a5f; margin-top: 2px;">${escapeHtml(summary.overall_recommendation || "Completed interview review.")}</div>
           </div>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px;">
             <div class="stat-card" style="margin: 0;">
               <p>Technical Average</p>
-              <strong style="color: var(--blue);">${summary.average_score} / 10</strong>
-              <div class="metric-sub" style="margin-top: 4px;">${summary.total_turns_evaluated} questions evaluated (${summary.follow_up_questions_count} follow-ups)</div>
+              <strong style="color: var(--blue);">${summary.average_score != null ? summary.average_score : "N/A"} / 10</strong>
+              <div class="metric-sub" style="margin-top: 4px;">${summary.total_turns_evaluated || 0} questions evaluated (${summary.follow_up_questions_count || 0} follow-ups)</div>
             </div>
             ${delivHtml}
             ${nvHtml}
@@ -4137,41 +4406,56 @@
 
           ${adaptHtml}
 
-          <h3 style="margin: 16px 0 8px 0; font-size: 1rem;">Turn-by-Turn Assessment</h3>
-          <table class="turn-history-table" style="width: 100%; border-collapse: collapse; margin-bottom: 18px;">
-            <thead>
-              <tr style="background: #f1f5f9;">
-                <th style="padding: 8px; text-align: left;">Turn</th>
-                <th style="padding: 8px; text-align: left;">Type</th>
-                <th style="padding: 8px; text-align: left;">Question & Feedback</th>
-                <th style="padding: 8px; text-align: left;">Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${turnsHtml}
-            </tbody>
-          </table>
+          ${coachingButtonHtml}
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-            <div class="callout-card callout-strong">
-              <h3>Top Strengths</h3>
-              <ul class="feedback-list">
-                ${(summary.top_strengths || []).map((s) => `<li>${s}</li>`).join("") || "<li>No specific strengths recorded.</li>"}
-              </ul>
-            </div>
-            <div class="callout-card callout-focus">
-              <h3>Areas for Candidate Growth</h3>
-              <ul class="feedback-list" style="color: #9f1239;">
-                ${(summary.key_areas_for_improvement || []).map((a) => `<li>${a}</li>`).join("") || "<li>No specific improvements needed.</li>"}
-              </ul>
-            </div>
-          </div>
+          <h3 style="margin: 20px 0 12px 0; font-size: 1.05rem;">Chronological Turn Replay (${turns.length} Turns)</h3>
+          ${turnsTimelineHtml || '<p style="color: var(--muted); font-style: italic;">No turns recorded for this session.</p>'}
         `;
+
+        const coachingBtn = document.getElementById(`btn-toggle-coaching-${sessionId}`);
+        const coachingDrawer = document.getElementById(`coaching-drawer-${sessionId}`);
+        const coachingBtnText = document.getElementById(`coaching-btn-text-${sessionId}`);
+
+        if (coachingBtn && coachingDrawer) {
+          coachingBtn.onclick = async () => {
+            if (coachingDrawer.style.display === "none") {
+              coachingDrawer.style.display = "block";
+              coachingBtnText.textContent = "Hide Coaching Report";
+              if (!coachingDrawer.dataset.loaded) {
+                try {
+                  const cData = await fetchApi(`/sessions/${sessionId}/coaching`);
+                  coachingDrawer.dataset.loaded = "true";
+                  const r = cData.report || {};
+                  let rHtml = "";
+                  if (r.overall_summary) {
+                    rHtml += `<div style="font-size: 0.92rem; color: #1e293b; margin-bottom: 12px; font-weight: 500;">${escapeHtml(r.overall_summary)}</div>`;
+                  }
+                  if (r.strengths && r.strengths.length > 0) {
+                    rHtml += `<div style="margin-bottom: 12px;"><strong style="color: #166534; font-size: 0.85rem; text-transform: uppercase;">Key Strengths</strong><ul style="margin: 4px 0 0 18px; font-size: 0.88rem;">${r.strengths.map(s => `<li><strong>${escapeHtml(s.area)}:</strong> ${escapeHtml(s.evidence)} <em>(${escapeHtml(s.advice)})</em></li>`).join("")}</ul></div>`;
+                  }
+                  if (r.priority_improvements && r.priority_improvements.length > 0) {
+                    rHtml += `<div style="margin-bottom: 12px;"><strong style="color: #991b1b; font-size: 0.85rem; text-transform: uppercase;">Priority Improvements</strong><ul style="margin: 4px 0 0 18px; font-size: 0.88rem;">${r.priority_improvements.map(pi => `<li><strong>${escapeHtml(pi.area)}:</strong> ${escapeHtml(pi.evidence)}<br><span style="color: var(--muted);">${escapeHtml(pi.why_it_matters)}</span><br><strong>Action:</strong> ${escapeHtml(pi.action)} (Practice: ${escapeHtml(pi.practice_target)})</li>`).join("")}</ul></div>`;
+                  }
+                  if (r.practice_plan && r.practice_plan.length > 0) {
+                    rHtml += `<div><strong style="color: #1e40af; font-size: 0.85rem; text-transform: uppercase;">Targeted Practice Plan</strong><ul style="margin: 4px 0 0 18px; font-size: 0.88rem;">${r.practice_plan.map(pp => `<li><strong>${escapeHtml(pp.category)}:</strong> ${escapeHtml(pp.focus)} (${pp.recommended_count} questions recommended)</li>`).join("")}</ul></div>`;
+                  }
+                  coachingDrawer.innerHTML = rHtml || "<p>No specific coaching items recorded.</p>";
+                } catch (cErr) {
+                  coachingDrawer.innerHTML = `<p style="color: var(--error); font-size: 0.88rem;">Unable to load coaching report: ${escapeHtml(cErr.message)}</p>`;
+                }
+              }
+            } else {
+              coachingDrawer.style.display = "none";
+              coachingBtnText.textContent = "View Detailed Coaching Report";
+            }
+          };
+        }
       } catch (err) {
-        modalBody.innerHTML = `<p style="color: var(--error);">Error loading session summary: ${err.message}</p>`;
+        modalBody.innerHTML = `<p style="color: var(--error);">Error loading session replay: ${escapeHtml(err.message)}</p>`;
       }
     }
     window.openSessionReview = openSessionReview;
+    window.openSessionReplay = openSessionReview;
 
     function closeSessionReview() {
       analyticsReviewModal.classList.add("hidden");

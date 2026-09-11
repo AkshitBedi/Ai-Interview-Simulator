@@ -35,6 +35,17 @@ try:
 except (ImportError, ValueError):
     from question_bank import CANONICAL_CATEGORIES
 
+try:
+    from .coaching import SessionNotFoundError, IncompleteSessionError
+except (ImportError, ValueError):
+    try:
+        from coaching import SessionNotFoundError, IncompleteSessionError
+    except ImportError:
+        class SessionNotFoundError(Exception):
+            pass
+        class IncompleteSessionError(Exception):
+            pass
+
 
 def select_next_bank_question(connection, session_id: int, category: str | None = None, difficulty: str | None = None):
     """
@@ -1834,4 +1845,305 @@ def get_session_summary(connection, session_id: int) -> dict | None:
         "top_strengths": list(dict.fromkeys(all_strengths))[:5],
         "key_areas_for_improvement": list(dict.fromkeys(all_improvements))[:5],
         "overall_recommendation": recommendation
+    }
+
+
+def get_session_replay(connection, session_id: int) -> dict:
+    """
+    Phase 15: Interview Replay & Detailed Session Review.
+    Reconstructs complete historical interview evidence for a completed session.
+    Deterministic, zero external LLM calls, strictly derived from persisted SQLite state.
+    """
+    # 1. Verify session exists and is completed
+    session_row = connection.execute(
+        "SELECT * FROM interview_sessions WHERE id = ?",
+        (session_id,)
+    ).fetchone()
+
+    if session_row is None:
+        raise SessionNotFoundError("Interview session not found.")
+
+    if session_row["status"] != "completed":
+        raise IncompleteSessionError("Interview session is still in progress. Replay is only available for completed sessions.")
+
+    # 2. Extract configuration and context safely
+    def _safe_json_loads(val, default=None):
+        if not val or not isinstance(val, str):
+            return default
+        try:
+            return json.loads(val)
+        except Exception:
+            return default
+
+    candidate_profile = _safe_json_loads(
+        session_row["candidate_profile"] if "candidate_profile" in session_row.keys() else None,
+        default=None
+    )
+    job_context = _safe_json_loads(
+        session_row["job_context"] if "job_context" in session_row.keys() else None,
+        default=None
+    )
+    selected_categories = _safe_json_loads(
+        session_row["selected_categories"] if "selected_categories" in session_row.keys() else None,
+        default=None
+    )
+
+    configuration = {
+        "category": session_row["category"] if "category" in session_row.keys() else None,
+        "difficulty": session_row["difficulty"] if "difficulty" in session_row.keys() else None,
+        "target_role": session_row["target_role"] if ("target_role" in session_row.keys() and session_row["target_role"]) else None,
+        "experience_level": session_row["experience_level"] if ("experience_level" in session_row.keys() and session_row["experience_level"]) else "mid",
+        "selected_categories": selected_categories,
+        "interviewer_style": session_row["interviewer_style"] if ("interviewer_style" in session_row.keys() and session_row["interviewer_style"]) else "professional"
+    }
+
+    context = {
+        "candidate_profile": candidate_profile,
+        "job_context": job_context
+    }
+
+    # 3. Session Summary reuse (existing get_session_summary)
+    summary_data = get_session_summary(connection, session_id) or {}
+    replay_summary = {
+        "total_turns_evaluated": summary_data.get("total_turns_evaluated", 0),
+        "bank_questions_count": summary_data.get("bank_questions_count", 0),
+        "follow_up_questions_count": summary_data.get("follow_up_questions_count", 0),
+        "claim_probes_count": summary_data.get("claim_probes_count", 0),
+        "remedial_follow_ups_count": summary_data.get("remedial_follow_ups_count", 0),
+        "average_score": summary_data.get("average_score", 0.0),
+        "categories_covered": summary_data.get("categories_covered", []),
+        "coverage_target": summary_data.get("coverage_target", 0),
+        "difficulty_progression": summary_data.get("difficulty_progression", {}),
+        "overall_recommendation": summary_data.get("overall_recommendation", ""),
+        "top_strengths": summary_data.get("top_strengths", []),
+        "key_areas_for_improvement": summary_data.get("key_areas_for_improvement", []),
+        "speech_summary": summary_data.get("speech_summary"),
+        "nonverbal_summary": summary_data.get("nonverbal_summary")
+    }
+
+    # 4. Fetch all turns chronologically: ORDER BY turn_number ASC, id ASC
+    turn_cols = {row["name"] for row in connection.execute("PRAGMA table_info(session_turns)").fetchall()}
+    claim_col_sql = "st.claim_id," if "claim_id" in turn_cols else "NULL AS claim_id,"
+    parent_col_sql = "st.parent_turn_id," if "parent_turn_id" in turn_cols else "NULL AS parent_turn_id,"
+
+    turn_rows = connection.execute(
+        f"""
+        SELECT st.id AS turn_id,
+               st.turn_number,
+               st.question_id,
+               st.question_text,
+               st.is_follow_up,
+               {parent_col_sql}
+               {claim_col_sql}
+               st.answer_id,
+               st.status,
+               q.category AS q_category,
+               q.difficulty AS q_difficulty,
+               q.topic AS q_topic,
+               q.quality_tier AS q_quality_tier,
+               a.answer AS answer_text,
+               e.score AS eval_score,
+               e.technical_accuracy AS eval_technical_accuracy,
+               e.feedback AS eval_feedback,
+               e.strengths AS eval_strengths,
+               e.missing_points AS eval_missing_points
+        FROM session_turns st
+        LEFT JOIN questions q ON q.id = st.question_id
+        LEFT JOIN answers a ON a.id = st.answer_id
+        LEFT JOIN evaluations e ON e.answer_id = a.id
+        WHERE st.session_id = ?
+        ORDER BY st.turn_number ASC, st.id ASC
+        """,
+        (session_id,)
+    ).fetchall()
+
+    # Pre-index turns for parent lookups and category propagation
+    turn_id_to_num = {r["turn_id"]: r["turn_number"] for r in turn_rows}
+    turn_id_to_cat = {r["turn_id"]: r["q_category"] for r in turn_rows if r["q_category"]}
+    turn_id_to_diff = {r["turn_id"]: r["q_difficulty"] for r in turn_rows if r["q_difficulty"]}
+
+    turns = []
+    for r in turn_rows:
+        is_fu = bool(r["is_follow_up"])
+        raw_claim_id = r["claim_id"] if "claim_id" in r.keys() else None
+        clean_claim_id = str(raw_claim_id).strip() if (raw_claim_id is not None and str(raw_claim_id).strip()) else None
+
+        # Approved turn classification:
+        if not is_fu:
+            turn_type = "bank_question"
+        elif clean_claim_id:
+            turn_type = "claim_probe"
+        else:
+            turn_type = "remedial_follow_up"
+
+        p_id = r["parent_turn_id"] if "parent_turn_id" in r.keys() else None
+        p_num = turn_id_to_num.get(p_id) if p_id is not None else None
+
+        parent_cat = turn_id_to_cat.get(p_id) if p_id is not None else None
+        parent_diff = turn_id_to_diff.get(p_id) if p_id is not None else None
+        effective_cat = r["q_category"] or parent_cat or session_row["category"] or "Technical"
+        effective_diff = r["q_difficulty"] or parent_diff or session_row["difficulty"] or "medium"
+
+        # Claim resolution against candidate_profile.claims
+        claim_probe_data = None
+        if turn_type == "claim_probe":
+            resolved = None
+            if candidate_profile and isinstance(candidate_profile, dict):
+                claims_list = candidate_profile.get("claims")
+                if isinstance(claims_list, list):
+                    for c in claims_list:
+                        if isinstance(c, dict) and c.get("claim_id") == clean_claim_id:
+                            resolved = c
+                            break
+            if resolved:
+                claim_probe_data = {
+                    "claim_id": clean_claim_id,
+                    "statement": resolved.get("statement"),
+                    "project_name": resolved.get("project_name"),
+                    "category": resolved.get("category"),
+                    "claim_type": resolved.get("claim_type"),
+                    "technologies": resolved.get("technologies", []) if isinstance(resolved.get("technologies"), list) else [],
+                    "metric": resolved.get("metric"),
+                    "ownership": resolved.get("ownership")
+                }
+            else:
+                claim_probe_data = {
+                    "claim_id": clean_claim_id,
+                    "statement": None,
+                    "project_name": None,
+                    "category": None,
+                    "claim_type": None,
+                    "technologies": [],
+                    "metric": None,
+                    "ownership": None
+                }
+
+        # Evaluation details
+        evaluation_dict = None
+        if r["eval_score"] is not None:
+            strengths = _safe_json_loads(r["eval_strengths"], default=[])
+            if not isinstance(strengths, list):
+                strengths = []
+            missing_points = _safe_json_loads(r["eval_missing_points"], default=[])
+            if not isinstance(missing_points, list):
+                missing_points = []
+            evaluation_dict = {
+                "score": r["eval_score"],
+                "technical_accuracy": r["eval_technical_accuracy"],
+                "feedback": r["eval_feedback"],
+                "strengths": strengths,
+                "missing_points": missing_points
+            }
+
+        # Speech analytics (null if text-only or absent)
+        speech_dict = None
+        if r["answer_id"] is not None:
+            sa_row = connection.execute(
+                """
+                SELECT audio_duration_seconds, speaking_duration_seconds,
+                       pause_duration_seconds, pause_count, average_pause_duration,
+                       long_pause_count, speaking_rate_wpm, articulation_rate_wpm,
+                       filler_word_count, filler_rate, filler_breakdown,
+                       repeated_words_count, phonation_ratio, delivery_score,
+                       delivery_feedback
+                FROM speech_analytics
+                WHERE answer_id = ?
+                """,
+                (r["answer_id"],)
+            ).fetchone()
+            if sa_row is not None:
+                filler_bd = _safe_json_loads(sa_row["filler_breakdown"], default={})
+                if not isinstance(filler_bd, dict):
+                    filler_bd = {}
+                speech_dict = {
+                    "audio_duration_seconds": sa_row["audio_duration_seconds"],
+                    "speaking_duration_seconds": sa_row["speaking_duration_seconds"],
+                    "pause_duration_seconds": sa_row["pause_duration_seconds"],
+                    "pause_count": sa_row["pause_count"],
+                    "average_pause_duration": sa_row["average_pause_duration"],
+                    "long_pause_count": sa_row["long_pause_count"],
+                    "speaking_rate_wpm": sa_row["speaking_rate_wpm"],
+                    "articulation_rate_wpm": sa_row["articulation_rate_wpm"],
+                    "filler_word_count": sa_row["filler_word_count"],
+                    "filler_rate": sa_row["filler_rate"],
+                    "filler_breakdown": filler_bd,
+                    "repeated_words_count": sa_row["repeated_words_count"],
+                    "phonation_ratio": sa_row["phonation_ratio"],
+                    "delivery_score": sa_row["delivery_score"],
+                    "delivery_feedback": sa_row["delivery_feedback"]
+                }
+
+        # Nonverbal analytics (null if video absent)
+        nonverbal_dict = None
+        if r["answer_id"] is not None:
+            nv_row = connection.execute(
+                """
+                SELECT video_duration_seconds, frames_analyzed, face_detected_ratio,
+                       centering_offset, gaze_deviation_ratio, avg_yaw_degrees,
+                       avg_pitch_degrees, avg_roll_degrees, yaw_variance,
+                       pitch_variance, roll_variance, head_motion_frequency_hz,
+                       motion_energy, camera_quality_flags, nonverbal_telemetry_score,
+                       nonverbal_feedback, vision_backend
+                FROM nonverbal_analytics
+                WHERE answer_id = ?
+                """,
+                (r["answer_id"],)
+            ).fetchone()
+            if nv_row is not None:
+                cam_flags = _safe_json_loads(nv_row["camera_quality_flags"], default=[])
+                if not isinstance(cam_flags, list):
+                    cam_flags = []
+                nonverbal_dict = {
+                    "video_duration_seconds": nv_row["video_duration_seconds"],
+                    "frames_analyzed": nv_row["frames_analyzed"],
+                    "face_detected_ratio": nv_row["face_detected_ratio"],
+                    "centering_offset": nv_row["centering_offset"],
+                    "gaze_deviation_ratio": nv_row["gaze_deviation_ratio"],
+                    "avg_yaw_degrees": nv_row["avg_yaw_degrees"],
+                    "avg_pitch_degrees": nv_row["avg_pitch_degrees"],
+                    "avg_roll_degrees": nv_row["avg_roll_degrees"],
+                    "yaw_variance": nv_row["yaw_variance"],
+                    "pitch_variance": nv_row["pitch_variance"],
+                    "roll_variance": nv_row["roll_variance"],
+                    "head_motion_frequency_hz": nv_row["head_motion_frequency_hz"],
+                    "motion_energy": nv_row["motion_energy"],
+                    "camera_quality_flags": cam_flags,
+                    "nonverbal_telemetry_score": nv_row["nonverbal_telemetry_score"],
+                    "nonverbal_feedback": nv_row["nonverbal_feedback"],
+                    "vision_backend": nv_row["vision_backend"]
+                }
+
+        turns.append({
+            "turn_id": r["turn_id"],
+            "turn_number": r["turn_number"],
+            "turn_type": turn_type,
+            "parent_turn_id": p_id,
+            "parent_turn_number": p_num,
+            "category": effective_cat,
+            "difficulty": effective_diff,
+            "question": {
+                "question_id": r["question_id"],
+                "text": r["question_text"],
+                "topic": r["q_topic"] if r["q_topic"] is not None else None,
+                "quality_tier": r["q_quality_tier"] if r["q_quality_tier"] is not None else None
+            },
+            "answer": {
+                "answer_id": r["answer_id"],
+                "text": r["answer_text"]
+            } if r["answer_id"] is not None else None,
+            "evaluation": evaluation_dict,
+            "speech_analytics": speech_dict,
+            "nonverbal_analytics": nonverbal_dict,
+            "claim_probe": claim_probe_data
+        })
+
+    return {
+        "session_id": session_row["id"],
+        "status": session_row["status"],
+        "created_at": session_row["created_at"],
+        "completed_at": session_row["completed_at"],
+        "configuration": configuration,
+        "context": context,
+        "summary": replay_summary,
+        "turns": turns
     }
