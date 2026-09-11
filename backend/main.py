@@ -40,6 +40,7 @@ try:
         VisionProcessingError
     )
     from .analytics import get_analytics_overview, get_analytics_history
+    from .insights_engine import get_analytics_insights
     from .coaching import (
         build_coaching_signals,
         generate_coaching_report,
@@ -78,6 +79,7 @@ except (ImportError, ValueError):
         VisionProcessingError
     )
     from analytics import get_analytics_overview, get_analytics_history
+    from insights_engine import get_analytics_insights
     from coaching import (
         build_coaching_signals,
         generate_coaching_report,
@@ -1376,3 +1378,14 @@ def get_analytics_history_endpoint(
     finally:
         connection.close()
 
+
+@app.get("/analytics/insights")
+def get_analytics_insights_endpoint():
+    """
+    Retrieves deterministic longitudinal performance insights across completed interview sessions.
+    """
+    connection = get_db()
+    try:
+        return get_analytics_insights(connection)
+    finally:
+        connection.close()

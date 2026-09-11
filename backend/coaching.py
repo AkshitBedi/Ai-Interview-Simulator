@@ -152,6 +152,68 @@ def resolve_effective_category(
     return "General"
 
 
+def classify_answer_quality(
+    score: int | float,
+    candidate_answer: str | None = None,
+    technical_accuracy: str | None = None,
+    question_text: str | None = None
+) -> str:
+    """
+    Classifies an interview answer into one of 4 canonical deterministic quality patterns:
+    - 'irrelevant/non-answer'
+    - 'inaccurate'
+    - 'strong'
+    - 'shallow/incomplete'
+    """
+    ans_text = (candidate_answer or "").strip()
+    acc_text = (technical_accuracy or "").lower()
+    q_text = (question_text or "").strip()
+
+    non_answer_patterns = [
+        r"^\s*i\s+don'?t\s+know\b",
+        r"^\s*idk\b",
+        r"^\s*no\s+idea\b",
+        r"^\s*pass\b",
+        r"^\s*skip\b",
+        r"^\s*can\s+you\s+repeat\b",
+        r"^\s*not\s+sure\b",
+        r"^\s*none\b"
+    ]
+
+    is_non_answer = False
+    if len(ans_text) < 15:
+        for pat in non_answer_patterns:
+            if re.search(pat, ans_text, re.IGNORECASE):
+                is_non_answer = True
+                break
+        if not is_non_answer and len(ans_text) < 8:
+            is_non_answer = True
+
+    if not is_non_answer and q_text:
+        clean_q = re.sub(r"[^\w\s]", "", q_text.lower()).strip()
+        clean_a = re.sub(r"[^\w\s]", "", ans_text.lower()).strip()
+        if clean_q and (clean_q == clean_a or (len(clean_q) > 20 and clean_q in clean_a and len(clean_a) < len(clean_q) + 25)):
+            is_non_answer = True
+
+    if is_non_answer:
+        return "irrelevant/non-answer"
+
+    is_inaccurate = False
+    if score <= 4:
+        is_inaccurate = True
+    elif acc_text:
+        has_inaccuracy_indicator = bool(re.search(r"\b(?:inaccurate|inaccuracies|incorrect|wrong|factual\s+error|conceptually\s+flawed)\b", acc_text))
+        has_negated_error = bool(re.search(r"\b(?:no|zero|without|not\s+have|free\s+of)\s+(?:inaccurac|incorrect|error|flaw)", acc_text))
+        if has_inaccuracy_indicator and not has_negated_error:
+            is_inaccurate = True
+
+    if is_inaccurate:
+        return "inaccurate"
+    elif score >= 8:
+        return "strong"
+    else:
+        return "shallow/incomplete"
+
 
 # ---------------------------------------------------------------------------
 # 1. Deterministic Coaching Signal Generation
@@ -344,51 +406,15 @@ def build_coaching_signals(connection: sqlite3.Connection, session_id: int) -> d
     # -----------------------------------------------------------------------
     answer_quality_patterns: list[dict[str, Any]] = []
 
-    # Non-answer trigger keywords (refusal, repetition, admission of no knowledge)
-    non_answer_patterns = [
-        r"^\s*i\s+don'?t\s+know\b",
-        r"^\s*no\s+idea\b",
-        r"^\s*pass\b",
-        r"^\s*skip\b",
-        r"^\s*can\s+you\s+repeat\b",
-        r"^\s*not\s+sure\b",
-        r"^\s*none\b"
-    ]
-
     for t in all_evaluated_turns:
         score = t["technical_score"]
         ans_text = (t["candidate_answer"] or "").strip()
         acc_text = (t["technical_accuracy"] or "").lower()
         q_text = (t["question_text"] or "").strip()
 
-        # Check for non-answer / refusal first
-        is_non_answer = False
-        if len(ans_text) < 15:
-            for pat in non_answer_patterns:
-                if re.search(pat, ans_text, re.IGNORECASE):
-                    is_non_answer = True
-                    break
-            if not is_non_answer and len(ans_text) < 8:
-                is_non_answer = True
+        pat = classify_answer_quality(score, ans_text, acc_text, q_text)
 
-        # Check question repetition
-        if not is_non_answer and q_text:
-            clean_q = re.sub(r"[^\w\s]", "", q_text.lower()).strip()
-            clean_a = re.sub(r"[^\w\s]", "", ans_text.lower()).strip()
-            if clean_q and (clean_q == clean_a or (len(clean_q) > 20 and clean_q in clean_a and len(clean_a) < len(clean_q) + 25)):
-                is_non_answer = True
-
-        # Determine technical inaccuracy strictly from structured evaluator field
-        is_inaccurate = False
-        if score <= 4:
-            is_inaccurate = True
-        elif acc_text:
-            has_inaccuracy_indicator = bool(re.search(r"\b(?:inaccurate|inaccuracies|incorrect|wrong|factual\s+error|conceptually\s+flawed)\b", acc_text))
-            has_negated_error = bool(re.search(r"\b(?:no|zero|without|not\s+have|free\s+of)\s+(?:inaccurac|incorrect|error|flaw)", acc_text))
-            if has_inaccuracy_indicator and not has_negated_error:
-                is_inaccurate = True
-
-        if is_non_answer:
+        if pat == "irrelevant/non-answer":
             answer_quality_patterns.append({
                 "turn_number": t["turn_number"],
                 "category": t["effective_category"],
@@ -396,7 +422,7 @@ def build_coaching_signals(connection: sqlite3.Connection, session_id: int) -> d
                 "is_knowledge_weakness": False,
                 "note": "Candidate gave a brief refusal, placeholder, or question repetition."
             })
-        elif is_inaccurate:
+        elif pat == "inaccurate":
             answer_quality_patterns.append({
                 "turn_number": t["turn_number"],
                 "category": t["effective_category"],
@@ -404,7 +430,7 @@ def build_coaching_signals(connection: sqlite3.Connection, session_id: int) -> d
                 "is_knowledge_weakness": True,
                 "note": "Evaluation indicates substantive technical inaccuracy in the response."
             })
-        elif score >= 8:
+        elif pat == "strong":
             answer_quality_patterns.append({
                 "turn_number": t["turn_number"],
                 "category": t["effective_category"],
@@ -413,7 +439,7 @@ def build_coaching_signals(connection: sqlite3.Connection, session_id: int) -> d
                 "note": "High-quality, technically accurate response."
             })
         else:
-            # 5 <= score <= 7
+            # "shallow/incomplete"
             answer_quality_patterns.append({
                 "turn_number": t["turn_number"],
                 "category": t["effective_category"],

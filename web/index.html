@@ -904,6 +904,83 @@
       font-size: 1.2rem;
     }
 
+
+    /* Phase 14: Insights Styles */
+    .insights-summary-banner {
+      background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+      border: 1px solid #bfdbfe;
+      border-left: 5px solid #3b82f6;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .insights-summary-banner h3 {
+      margin: 0 0 6px 0;
+      font-size: 1rem;
+      color: #1e3a8a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .insights-summary-banner p {
+      margin: 0;
+      color: #334155;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+    .insights-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .insights-stat-box {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-top: 10px;
+    }
+    .insights-stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.85rem;
+    }
+    .insights-stat-row:last-child {
+      border-bottom: none;
+    }
+    .insights-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      border-radius: 9999px;
+      text-transform: capitalize;
+    }
+    .insights-badge-improving {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    .insights-badge-declining {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    .insights-badge-stable {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+    .insights-badge-insufficient {
+      background: #f8fafc;
+      color: #94a3b8;
+      border: 1px solid #e2e8f0;
+    }
+
     .analytics-empty-state p {
       color: var(--muted);
       max-width: 460px;
@@ -1522,8 +1599,13 @@
         </button>
       </div>
 
-      <!-- Main Analytics Content -->
+            <!-- Main Analytics Content -->
       <div id="analytics-content" class="hidden">
+        <!-- Phase 14: Executive Summary Banner -->
+        <div id="insights-executive-banner" class="insights-summary-banner hidden">
+          <h3>⚡ Executive Performance Insights</h3>
+          <p id="insights-executive-text">Loading longitudinal insights...</p>
+        </div>
         <!-- 4 Executive KPI Cards (Independent Dimensions) -->
         <section aria-label="Executive Performance KPIs">
           <h2>Executive Performance Overview</h2>
@@ -1642,6 +1724,76 @@
               <div id="chart-nonverbal-container"></div>
             </div>
           </div>
+        </section>
+
+                <!-- Phase 14: Longitudinal Category Trajectory -->
+        <section class="card" id="insights-category-section" aria-label="Longitudinal Category Trajectory" style="margin-top: 24px;">
+          <h2>Longitudinal Category Trajectory</h2>
+          <p style="color: var(--muted); font-size: 0.85rem; margin-top: -4px;">
+            Multi-session skill progression tracked across canonical categories (Bank questions only).
+          </p>
+          <table class="turn-history-table" style="margin-top: 14px;">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Sessions Evaluated</th>
+                <th>Baseline (First)</th>
+                <th>Latest</th>
+                <th>Absolute Change</th>
+                <th>Trajectory</th>
+                <th>Current Status</th>
+              </tr>
+            </thead>
+            <tbody id="insights-category-tbody"></tbody>
+          </table>
+        </section>
+
+        <!-- Phase 14: Difficulty Resilience & Performance Consistency -->
+        <div class="insights-grid-2">
+          <!-- Difficulty & Resilience -->
+          <section class="card" id="insights-difficulty-section" aria-label="Difficulty & Resilience" style="margin-top: 0;">
+            <h2>Difficulty & Resilience</h2>
+            <p style="color: var(--muted); font-size: 0.85rem; margin-top: -4px;">
+              Distribution, tier averages, hard question success rate, and chronological resilience.
+            </p>
+            <div class="insights-stat-box" id="insights-difficulty-content"></div>
+          </section>
+
+          <!-- Performance Consistency -->
+          <section class="card" id="insights-consistency-section" aria-label="Performance Consistency" style="margin-top: 0;">
+            <h2>Performance Consistency</h2>
+            <p style="color: var(--muted); font-size: 0.85rem; margin-top: -4px;">
+              Session bank score spread, variance stability, and best/worst sessions.
+            </p>
+            <div class="insights-stat-box" id="insights-consistency-content"></div>
+          </section>
+        </div>
+
+        <!-- Phase 14: Answer Quality Patterns -->
+        <section class="card" id="insights-quality-section" aria-label="Answer Quality Patterns" style="margin-top: 24px;">
+          <h2>Answer Quality Patterns</h2>
+          <p style="color: var(--muted); font-size: 0.85rem; margin-top: -4px;">
+            Deterministic response classification across all completed interviews.
+          </p>
+          <div class="insights-stat-box" id="insights-quality-content"></div>
+        </section>
+
+        <!-- Phase 14: Communication Trends (Conditionally Rendered) -->
+        <section class="card hidden" id="insights-speech-section" aria-label="Communication Trends" style="margin-top: 24px;">
+          <h2>Communication Dynamics Trends</h2>
+          <p style="color: var(--muted); font-size: 0.85rem; margin-top: -4px;">
+            Speech delivery score, filler rate delta, pace alignment to [115, 165] WPM, and pause behavior.
+          </p>
+          <div class="insights-stat-box" id="insights-speech-content"></div>
+        </section>
+
+        <!-- Phase 14: Resume Claim Defense (Conditionally Rendered) -->
+        <section class="card hidden" id="insights-claims-section" aria-label="Resume Claim Defense" style="margin-top: 24px;">
+          <h2>Resume Claim Defense & Substantiation</h2>
+          <p style="color: var(--muted); font-size: 0.85rem; margin-top: -4px;">
+            Substantiation evidence when candidate claims and projects were probed.
+          </p>
+          <div class="insights-stat-box" id="insights-claims-content"></div>
         </section>
 
         <!-- Completed Interview History -->
@@ -2105,7 +2257,7 @@
       const roleDisplay = activeSessionTargetRole ? ` &middot; ${activeSessionTargetRole}` : "";
       const catBadge = catDisplay ? ` &middot; <span style="color: var(--muted); font-weight: normal;">[${catDisplay}]</span>` : "";
       sessionProgressText.innerHTML = `<strong>Session #${activeSessionId}</strong> &middot; Turn ${activeTurnNumber} of ${activeMaxTurns}${roleDisplay}${catBadge}`;
-      
+
       if (questionData.is_follow_up) {
         sessionQuestionTypeBadge.className = "badge badge-followup";
         sessionQuestionTypeBadge.textContent = "Adaptive Follow-Up";
@@ -3301,9 +3453,10 @@
     async function loadAnalyticsDashboard() {
       try {
         setStatus("Loading analytics & progress tracking...");
-        const [overview, history] = await Promise.all([
+        const [overview, history, insights] = await Promise.all([
           fetchApi("/analytics/overview"),
-          fetchApi(`/analytics/history?limit=${analyticsPageLimit}&offset=${analyticsPageOffset}`)
+          fetchApi(`/analytics/history?limit=${analyticsPageLimit}&offset=${analyticsPageOffset}`),
+          fetchApi("/analytics/insights").catch(() => null)
         ]);
 
         if (overview.total_completed_interviews === 0) {
@@ -3319,6 +3472,9 @@
         renderAnalyticsOverview(overview);
         renderAnalyticsHistory(history);
         renderTrendsCharts(overview.trends.sessions || []);
+        if (insights) {
+          renderAnalyticsInsights(insights);
+        }
 
         setStatus("");
       } catch (err) {
@@ -3339,6 +3495,279 @@
         return `<span class="trajectory-badge decline">▼ ${deltaPercent}% decline (S#${firstId} → S#${latestId})</span>`;
       } else {
         return `<span class="trajectory-badge neutral">► 0.0% unchanged (S#${firstId} → S#${latestId})</span>`;
+      }
+    }
+
+
+    function formatInsightsTrendBadge(trend) {
+      if (!trend || trend === "insufficient_data") {
+        return `<span class="insights-badge insights-badge-insufficient">Insufficient data</span>`;
+      }
+      if (trend === "improving") {
+        return `<span class="insights-badge insights-badge-improving">▲ Improving</span>`;
+      }
+      if (trend === "declining") {
+        return `<span class="insights-badge insights-badge-declining">▼ Declining</span>`;
+      }
+      return `<span class="insights-badge insights-badge-stable">● Stable</span>`;
+    }
+
+    function renderAnalyticsInsights(insights) {
+      if (!insights) return;
+
+      // 1. Executive Summary Banner
+      const banner = document.getElementById("insights-executive-banner");
+      const bannerText = document.getElementById("insights-executive-text");
+      if (banner && bannerText && insights.executive_summary) {
+        bannerText.textContent = insights.executive_summary;
+        banner.classList.remove("hidden");
+      }
+
+      // 2. Category Progression Table
+      const catTbody = document.getElementById("insights-category-tbody");
+      if (catTbody && insights.category_progression) {
+        catTbody.innerHTML = "";
+        insights.category_progression.forEach(cp => {
+          const tr = document.createElement("tr");
+          const changeText = cp.absolute_change !== null
+            ? (cp.absolute_change > 0 ? `+${cp.absolute_change}` : `${cp.absolute_change}`)
+            : "--";
+          const statusBadge = cp.status === "strong"
+            ? `<span class="badge badge-bank">Strong</span>`
+            : (cp.status === "moderate"
+              ? `<span class="badge badge-followup">Moderate</span>`
+              : (cp.status === "needs_focus"
+                ? `<span class="badge" style="background:#fee2e2;color:#991b1b;">Needs Focus</span>`
+                : `<span class="badge badge-adaptive">Unseen</span>`));
+
+          tr.innerHTML = `
+            <td><strong>${escapeHtml(cp.category)}</strong></td>
+            <td>${cp.observations_count}</td>
+            <td>${cp.first_score !== null ? cp.first_score : "--"}</td>
+            <td>${cp.latest_score !== null ? cp.latest_score : "--"}</td>
+            <td>${changeText}</td>
+            <td>${formatInsightsTrendBadge(cp.trend)}</td>
+            <td>${statusBadge}</td>
+          `;
+          catTbody.appendChild(tr);
+        });
+      }
+
+      // 3. Difficulty & Resilience
+      const diffBox = document.getElementById("insights-difficulty-content");
+      if (diffBox && insights.difficulty_progression) {
+        const dp = insights.difficulty_progression;
+        const dist = dp.distribution || {};
+        const avgs = dp.tier_averages || {};
+        const res = dp.resilience || {};
+        const hardSuccess = dp.hard_success_rate !== null ? `${dp.hard_success_rate}%` : "No hard questions";
+        const medRes = res.medium !== null ? (res.medium > 0 ? `+${res.medium}` : `${res.medium}`) + " pts" : "Insufficient sessions";
+        const hardRes = res.hard !== null ? (res.hard > 0 ? `+${res.hard}` : `${res.hard}`) + " pts" : "Insufficient sessions";
+
+        diffBox.innerHTML = `
+          <div class="insights-stat-row">
+            <span>Question Distribution</span>
+            <strong>Easy: ${dist.easy || 0} &middot; Medium: ${dist.medium || 0} &middot; Hard: ${dist.hard || 0}</strong>
+          </div>
+          <div class="insights-stat-row">
+            <span>Tier Averages</span>
+            <strong>Easy: ${avgs.easy !== null ? avgs.easy : "--"} &middot; Med: ${avgs.medium !== null ? avgs.medium : "--"} &middot; Hard: ${avgs.hard !== null ? avgs.hard : "--"}</strong>
+          </div>
+          <div class="insights-stat-row">
+            <span>Hard-Question Success Rate (&ge; 7.0)</span>
+            <strong>${hardSuccess}</strong>
+          </div>
+          <div class="insights-stat-row">
+            <span>Medium-Tier Resilience (Recent vs Earlier)</span>
+            <strong>${medRes}</strong>
+          </div>
+          <div class="insights-stat-row">
+            <span>Hard-Tier Resilience (Recent vs Earlier)</span>
+            <strong>${hardRes}</strong>
+          </div>
+        `;
+      }
+
+      // 4. Performance Consistency
+      const consBox = document.getElementById("insights-consistency-content");
+      if (consBox && insights.consistency) {
+        const c = insights.consistency;
+        const best = c.best_session;
+        const worst = c.worst_session;
+        const stdDevText = c.standard_deviation !== null ? `${c.standard_deviation} pts` : "Insufficient data (needs 3+)";
+        const varianceText = (c.earlier_standard_deviation !== null && c.recent_standard_deviation !== null)
+          ? `Earlier: ${c.earlier_standard_deviation} &rarr; Recent: ${c.recent_standard_deviation}`
+          : "Needs 4+ sessions";
+
+        const bestText = best
+          ? `Session #${best.session_id} (${best.score}/10) &middot; ${escapeHtml((best.categories || []).join(", ") || "General")}`
+          : "--";
+        const worstText = worst
+          ? `Session #${worst.session_id} (${worst.score}/10) &middot; ${escapeHtml((worst.categories || []).join(", ") || "General")}`
+          : "--";
+
+        consBox.innerHTML = `
+          <div class="insights-stat-row">
+            <span>Bank Score Range (Min &ndash; Max)</span>
+            <strong>${c.min_score !== null ? c.min_score : "--"} &ndash; ${c.max_score !== null ? c.max_score : "--"} (Span: ${c.span !== null ? c.span : "--"} pts)</strong>
+          </div>
+          <div class="insights-stat-row">
+            <span>Sample Standard Deviation</span>
+            <strong>${stdDevText}</strong>
+          </div>
+          <div class="insights-stat-row">
+            <span>Variance Stability</span>
+            <strong>${varianceText}</strong>
+          </div>
+          <div class="insights-stat-row">
+            <span>Best Session</span>
+            <strong style="color: #166534;">${bestText}</strong>
+          </div>
+          <div class="insights-stat-row">
+            <span>Worst Session</span>
+            <strong style="color: #991b1b;">${worstText}</strong>
+          </div>
+        `;
+      }
+
+      // 5. Answer Quality Patterns
+      const qualBox = document.getElementById("insights-quality-content");
+      if (qualBox && insights.answer_quality_patterns) {
+        const aq = insights.answer_quality_patterns;
+        const dist = aq.distribution || {};
+        const pcts = aq.percentages || {};
+        const recur = (aq.categories_with_recurring_weakness || []).join(", ") || "None detected";
+
+        qualBox.innerHTML = `
+          <div class="insights-stat-row">
+            <span>Total Answers Evaluated</span>
+            <strong>${aq.total_evaluated_answers || 0}</strong>
+          </div>
+          <div class="insights-stat-row">
+            <span>Classification Breakdown</span>
+            <div>
+              <span class="insights-badge insights-badge-improving" style="margin-right:4px;">Strong: ${dist.strong || 0} (${pcts.strong || 0}%)</span>
+              <span class="insights-badge insights-badge-stable" style="margin-right:4px;">Shallow: ${dist.shallow_incomplete || 0} (${pcts.shallow_incomplete || 0}%)</span>
+              <span class="insights-badge insights-badge-declining" style="margin-right:4px;">Inaccurate: ${dist.inaccurate || 0} (${pcts.inaccurate || 0}%)</span>
+              <span class="insights-badge insights-badge-insufficient">Non-Answer: ${dist.non_answer || 0} (${pcts.non_answer || 0}%)</span>
+            </div>
+          </div>
+          <div class="insights-stat-row">
+            <span>Recurring Knowledge Weakness Categories</span>
+            <strong>${escapeHtml(recur)}</strong>
+          </div>
+        `;
+      }
+
+      // 6. Communication Trends (Conditional: requires n >= 2 audio observations)
+      const speechSec = document.getElementById("insights-speech-section");
+      const speechBox = document.getElementById("insights-speech-content");
+      if (speechSec && speechBox) {
+        if (insights.communication_trends && insights.communication_trends.sample_size >= 2) {
+          speechSec.classList.remove("hidden");
+          const ct = insights.communication_trends;
+          const d = ct.delivery || {};
+          const w = ct.speaking_rate || {};
+          const f = ct.filler_rate || {};
+          const p = ct.pause_behavior || {};
+
+          const delivDelta = d.absolute_change !== null
+            ? ` (delta ${d.absolute_change > 0 ? "+" + d.absolute_change : d.absolute_change})`
+            : "";
+          const fillerDelta = f.absolute_change !== null
+            ? ` (delta ${f.absolute_change > 0 ? "+" + f.absolute_change : f.absolute_change} pp)`
+            : "";
+
+          speechBox.innerHTML = `
+            <div class="insights-stat-row">
+              <span>Speech Delivery (${ct.sample_size} sessions)</span>
+              <div>
+                <span>${d.first !== null ? d.first : "--"} &rarr; ${d.latest !== null ? d.latest : "--"}${delivDelta}</span>
+                ${formatInsightsTrendBadge(d.trend)}
+              </div>
+            </div>
+            <div class="insights-stat-row">
+              <span>Speaking Rate (Ideal: 115&ndash;165 WPM)</span>
+              <div>
+                <span>${w.first_wpm !== null ? w.first_wpm : "--"} WPM &rarr; ${w.latest_wpm !== null ? w.latest_wpm : "--"} WPM</span>
+                ${formatInsightsTrendBadge(w.trend)}
+              </div>
+            </div>
+            <div class="insights-stat-row">
+              <span>Filler Word Rate Trend</span>
+              <div>
+                <span>${f.first !== null ? f.first + "%" : "--"} &rarr; ${f.latest !== null ? f.latest + "%" : "--"}${fillerDelta}</span>
+                ${formatInsightsTrendBadge(f.trend)}
+              </div>
+            </div>
+            <div class="insights-stat-row">
+              <span>Global Pause Behavior</span>
+              <strong>Long Pauses: ${p.total_long_pauses || 0} &middot; Total Pauses: ${p.total_pauses || 0} &middot; Avg Duration: ${p.average_pause_duration !== null ? p.average_pause_duration + "s" : "--"}</strong>
+            </div>
+          `;
+        } else {
+          speechSec.classList.add("hidden");
+        }
+      }
+
+      // 7. Resume Claim Defense (Conditional)
+      const claimsSec = document.getElementById("insights-claims-section");
+      const claimsBox = document.getElementById("insights-claims-content");
+      if (claimsSec && claimsBox) {
+        const rc = insights.resume_claim_analytics;
+        if (rc && (rc.sessions_with_claims > 0 || rc.claim_instances_probed > 0)) {
+          claimsSec.classList.remove("hidden");
+          const sub = rc.substantiation_breakdown || {};
+          let probedRowsHtml = "";
+          if (rc.probed_claims && rc.probed_claims.length > 0) {
+            probedRowsHtml = `
+              <table class="turn-history-table" style="margin-top:12px;">
+                <thead>
+                  <tr>
+                    <th>Session</th>
+                    <th>Project</th>
+                    <th>Claim Statement</th>
+                    <th>Score</th>
+                    <th>Substantiation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rc.probed_claims.map(pc => `
+                    <tr>
+                      <td>#${pc.session_id}</td>
+                      <td><strong>${escapeHtml(pc.project_name || "General")}</strong></td>
+                      <td>${escapeHtml(pc.statement || "--")}</td>
+                      <td>${pc.score !== null ? pc.score + "/10" : "--"}</td>
+                      <td>
+                        <span class="insights-badge ${pc.substantiation_status === 'strongly_substantiated' ? 'insights-badge-improving' : (pc.substantiation_status === 'partially_substantiated' ? 'insights-badge-stable' : 'insights-badge-declining')}">
+                          ${pc.substantiation_status.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+          }
+
+          claimsBox.innerHTML = `
+            <div class="insights-stat-row">
+              <span>Probing Scope & Projects</span>
+              <strong>${rc.claim_instances_probed} probed of ${rc.total_claim_instances_available_across_sessions} available &middot; ${rc.projects_probed} projects challenged</strong>
+            </div>
+            <div class="insights-stat-row">
+              <span>Defense Substantiation Breakdown</span>
+              <div>
+                <span class="insights-badge insights-badge-improving" style="margin-right:4px;">Strong (&ge; 7.0): ${sub.strongly_substantiated || 0}</span>
+                <span class="insights-badge insights-badge-stable" style="margin-right:4px;">Partial (5.0&ndash;6.9): ${sub.partially_substantiated || 0}</span>
+                <span class="insights-badge insights-badge-declining">Weak (&lt; 5.0): ${sub.weakly_substantiated || 0}</span>
+              </div>
+            </div>
+            ${probedRowsHtml}
+          `;
+        } else {
+          claimsSec.classList.add("hidden");
+        }
       }
     }
 
