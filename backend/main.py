@@ -44,6 +44,12 @@ try:
         SessionNotFoundError,
         IncompleteSessionError
     )
+    from .question_bank import (
+        normalize_difficulty,
+        serialize_string_list,
+        parse_string_list,
+        parse_question_row,
+    )
 except (ImportError, ValueError):
     # Works when started inside backend: uvicorn main:app
     from database import create_tables, get_db
@@ -74,7 +80,13 @@ except (ImportError, ValueError):
         SessionNotFoundError,
         IncompleteSessionError
     )
-from typing import Literal
+    from question_bank import (
+        normalize_difficulty,
+        serialize_string_list,
+        parse_string_list,
+        parse_question_row,
+    )
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -300,24 +312,67 @@ def get_question(question_id: int):
 
 class InterviewQuestion(BaseModel):
     category: str = Field(min_length=2)
-    difficulty: Literal["beginner", "medium", "hard"]
+    difficulty: Literal["beginner", "easy", "medium", "hard"]
     question: str = Field(min_length=10)
+    topic: Optional[str] = None
+    subtopic: Optional[str] = None
+    question_type: Optional[str] = None
+    skill_type: Optional[str] = None
+    quality_tier: Optional[str] = "core"
+    expected_concepts: Optional[list[str]] = None
+    common_mistakes: Optional[list[str]] = None
+    ideal_answer_points: Optional[list[str]] = None
+    prerequisites: Optional[list[str]] = None
 
 @app.post("/questions")
 def create_question(interview_question: InterviewQuestion):
-    connection = get_db()
+    """
+    Creates a new question in the question bank.
 
-    cursor = connection.execute(
-        """
-        INSERT INTO questions (category, difficulty, question)
-        VALUES (?, ?, ?)
-        """,
-        (
-            interview_question.category,
-            interview_question.difficulty,
-            interview_question.question
+    QUALITY_VALIDATION_POLICY: AUDIT_ONLY
+    Question metadata validation and duplicate detection are authoring/CI/audit safeguards;
+    runtime question insertion is not currently gated by them.
+    """
+    connection = get_db()
+    cols = {row["name"] for row in connection.execute("PRAGMA table_info(questions)").fetchall()}
+
+    if "topic" in cols:
+        cursor = connection.execute(
+            """
+            INSERT INTO questions (
+                category, difficulty, question,
+                topic, subtopic, question_type, skill_type, quality_tier,
+                expected_concepts, common_mistakes, ideal_answer_points, prerequisites
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                interview_question.category,
+                interview_question.difficulty,
+                interview_question.question,
+                interview_question.topic,
+                interview_question.subtopic,
+                interview_question.question_type,
+                interview_question.skill_type,
+                interview_question.quality_tier or "core",
+                json.dumps(interview_question.expected_concepts or []),
+                json.dumps(interview_question.common_mistakes or []),
+                json.dumps(interview_question.ideal_answer_points or []),
+                json.dumps(interview_question.prerequisites or []),
+            )
         )
-    )
+    else:
+        cursor = connection.execute(
+            """
+            INSERT INTO questions (category, difficulty, question)
+            VALUES (?, ?, ?)
+            """,
+            (
+                interview_question.category,
+                interview_question.difficulty,
+                interview_question.question
+            )
+        )
 
     connection.commit()
 
@@ -327,6 +382,8 @@ def create_question(interview_question: InterviewQuestion):
         "difficulty": interview_question.difficulty,
         "question": interview_question.question
     }
+    if interview_question.topic is not None:
+        new_question["topic"] = interview_question.topic
 
     connection.close()
 
@@ -370,8 +427,17 @@ def get_questions(
 
 class InterviewQuestionUpdate(BaseModel):
     category: str = Field(min_length=2)
-    difficulty: Literal["beginner", "medium", "hard"]
+    difficulty: Literal["beginner", "easy", "medium", "hard"]
     question: str = Field(min_length=10)
+    topic: Optional[str] = None
+    subtopic: Optional[str] = None
+    question_type: Optional[str] = None
+    skill_type: Optional[str] = None
+    quality_tier: Optional[str] = "core"
+    expected_concepts: Optional[list[str]] = None
+    common_mistakes: Optional[list[str]] = None
+    ideal_answer_points: Optional[list[str]] = None
+    prerequisites: Optional[list[str]] = None
 
 @app.put("/questions/{question_id}")
 def update_question(question_id: int, updated_question: InterviewQuestionUpdate):

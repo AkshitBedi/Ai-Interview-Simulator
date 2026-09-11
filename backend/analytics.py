@@ -1,4 +1,4 @@
-﻿"""
+"""
 backend/analytics.py
 
 Pure deterministic analytics and progress tracking calculations for completed
@@ -10,6 +10,11 @@ creating redundant summary tables or introducing blended overall scores.
 
 import sqlite3
 from typing import Any
+
+try:
+    from .category_classifier import compute_category_status
+except (ImportError, ValueError):
+    from category_classifier import compute_category_status
 
 
 def _resolve_effective_category(
@@ -67,16 +72,12 @@ def _calculate_dimension_change(
 def _compute_category_status(avg_score: float) -> str:
     """
     Section 5 Category Status:
+    Delegates to shared category_classifier.compute_category_status().
     average >= 7.0: strong
     6.0 <= average < 7.0: moderate
     average < 6.0: needs_focus
     """
-    if avg_score >= 7.0:
-        return "strong"
-    elif avg_score >= 6.0:
-        return "moderate"
-    else:
-        return "needs_focus"
+    return compute_category_status(avg_score)
 
 
 def _fetch_completed_sessions_and_turns(

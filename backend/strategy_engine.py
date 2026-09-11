@@ -14,16 +14,55 @@ Handles:
 """
 
 import math
-from typing import Literal
+import sqlite3
+from typing import Any, Literal
 
 CANONICAL_DIFFICULTIES = ["easy", "medium", "hard"]
 Difficulty = Literal["easy", "medium", "hard"]
 
-CATEGORY_STATE_UNSEEN = "UNSEEN"
-CATEGORY_STATE_COVERED_UNSCORED = "COVERED_UNSCORED"
-CATEGORY_STATE_NEEDS_FOCUS = "NEEDS_FOCUS"
-CATEGORY_STATE_MODERATE = "MODERATE"
-CATEGORY_STATE_STRONG = "STRONG"
+try:
+    from .question_bank import (
+        CANONICAL_CATEGORIES,
+        calculate_diversity_score,
+        rank_candidates_by_diversity,
+        parse_question_row,
+        BASE_DIVERSITY_SCORE,
+    )
+except (ImportError, ValueError):
+    from question_bank import (
+        CANONICAL_CATEGORIES,
+        calculate_diversity_score,
+        rank_candidates_by_diversity,
+        parse_question_row,
+        BASE_DIVERSITY_SCORE,
+    )
+
+try:
+    from .category_classifier import (
+        CATEGORY_STATE_UNSEEN,
+        CATEGORY_STATE_COVERED_UNSCORED,
+        CATEGORY_STATE_NEEDS_FOCUS,
+        CATEGORY_STATE_MODERATE,
+        CATEGORY_STATE_STRONG,
+        CategoryState,
+        classify_category_state,
+        classify_scored_category,
+        THRESHOLD_NEEDS_FOCUS,
+        THRESHOLD_STRONG,
+    )
+except (ImportError, ValueError):
+    from category_classifier import (
+        CATEGORY_STATE_UNSEEN,
+        CATEGORY_STATE_COVERED_UNSCORED,
+        CATEGORY_STATE_NEEDS_FOCUS,
+        CATEGORY_STATE_MODERATE,
+        CATEGORY_STATE_STRONG,
+        CategoryState,
+        classify_category_state,
+        classify_scored_category,
+        THRESHOLD_NEEDS_FOCUS,
+        THRESHOLD_STRONG,
+    )
 
 
 def normalize_difficulty(difficulty: str | None) -> Difficulty:
@@ -64,34 +103,6 @@ def calculate_coverage_target(max_turns: int, available_category_count: int) -> 
     target = min(target, available_category_count)
     return max(1, target)
 
-
-def classify_category_state(bank_questions_asked: int, evaluated_bank_scores: list[float]) -> str:
-    """
-    Classifies a category into one of 5 canonical states for adaptive strategy:
-    - UNSEEN: bank_questions_asked == 0
-    - COVERED_UNSCORED: bank_questions_asked > 0 and len(evaluated_bank_scores) == 0 (neutral, never 0 or weak)
-    - NEEDS_FOCUS: recent-2 evaluated bank average < 6.0
-    - MODERATE: recent-2 evaluated bank average between 6.0 and 6.99 (6.0 <= avg < 7.0)
-    - STRONG: recent-2 evaluated bank average >= 7.0
-
-    Adaptive Category-State Average Window:
-    - Uses the most recent 2 evaluated bank-question scores (evaluated_bank_scores[-2:]).
-    - If only 1 exists, uses that 1 score.
-    - Follow-up scores are excluded.
-    - This state average is strictly for adaptive classification; the lifetime average_score
-      used in reporting and session summary is a separate metric and remains lifetime-based.
-    """
-    if bank_questions_asked == 0:
-        return CATEGORY_STATE_UNSEEN
-    if not evaluated_bank_scores:
-        return CATEGORY_STATE_COVERED_UNSCORED
-    recent = evaluated_bank_scores[-2:]
-    avg = sum(recent) / len(recent)
-    if avg < 6.0:
-        return CATEGORY_STATE_NEEDS_FOCUS
-    if avg < 7.0:
-        return CATEGORY_STATE_MODERATE
-    return CATEGORY_STATE_STRONG
 
 
 def adapt_difficulty(current_difficulty: str, recent_bank_scores: list[float]) -> Difficulty:
@@ -190,9 +201,15 @@ def build_interview_state(connection, session_id: int) -> dict:
         available_categories = [configured_category]
     else:
         cat_rows = connection.execute(
-            "SELECT DISTINCT category FROM questions WHERE category IS NOT NULL AND TRIM(category) != '' ORDER BY category ASC"
+            "SELECT DISTINCT category FROM questions WHERE category IS NOT NULL AND TRIM(category) != '' AND LOWER(TRIM(category)) != 'string' ORDER BY category ASC"
         ).fetchall()
-        available_categories = [r["category"] for r in cat_rows]
+        db_categories = [r["category"] for r in cat_rows]
+
+        canonical_in_db = [c for c in db_categories if c in CANONICAL_CATEGORIES]
+        if canonical_in_db and not any(c in db_categories for c in ("SQL", "FastAPI", "CatA", "CatB", "CatC", "CatD")):
+            available_categories = canonical_in_db
+        else:
+            available_categories = db_categories
 
     categories_state: dict[str, dict] = {}
     for cat in available_categories:
@@ -318,12 +335,53 @@ def rank_categories_deterministically(
     return active_cats
 
 
+def get_recent_bank_questions(
+    connection: sqlite3.Connection,
+    session_id: int,
+    limit: int = 3
+) -> list[dict[str, Any]]:
+    """
+    Fetches the up to `limit` most recent bank questions asked in the active session.
+    Follow-up turns are strictly excluded (is_follow_up == 0).
+    Ordered chronologically: oldest of the recent to newest of the recent,
+    so history[-1] is the most recent bank question.
+    """
+    cols = {row["name"] for row in connection.execute("PRAGMA table_info(questions)").fetchall()}
+    if "topic" in cols:
+        query = """
+            SELECT q.id, q.category, q.difficulty, q.question,
+                   q.topic, q.subtopic, q.question_type, q.skill_type, q.quality_tier,
+                   q.expected_concepts, q.common_mistakes, q.ideal_answer_points, q.prerequisites
+            FROM session_turns st
+            JOIN questions q ON q.id = st.question_id
+            WHERE st.session_id = ?
+              AND st.is_follow_up = 0
+              AND st.question_id IS NOT NULL
+            ORDER BY st.turn_number DESC
+            LIMIT ?
+        """
+    else:
+        query = """
+            SELECT q.id, q.category, q.difficulty, q.question
+            FROM session_turns st
+            JOIN questions q ON q.id = st.question_id
+            WHERE st.session_id = ?
+              AND st.is_follow_up = 0
+              AND st.question_id IS NOT NULL
+            ORDER BY st.turn_number DESC
+            LIMIT ?
+        """
+    rows = connection.execute(query, (session_id, limit)).fetchall()
+    return [parse_question_row(r) for r in reversed(rows)]
+
+
 def select_bank_question(
-    connection,
+    connection: sqlite3.Connection,
     category: str,
-    requested_difficulty: Difficulty,
-    used_question_ids: set[int]
-) -> tuple[dict | None, Difficulty | None]:
+    requested_difficulty: str,
+    used_question_ids: set[int] | None = None,
+    recent_bank_questions: list[dict[str, Any]] | None = None,
+) -> tuple[dict[str, Any] | None, str | None]:
     """
     Selects a bank question for the specified category and target difficulty.
     
@@ -332,7 +390,18 @@ def select_bank_question(
     - requested hard: [hard, medium, easy]
     - requested easy: [easy, medium, hard]
 
-    Tie-breaker: lowest question ID (ORDER BY id ASC LIMIT 1).
+    For EACH difficulty tier:
+    1. Query eligible unused questions in the selected category and current tier.
+    2. If ZERO eligible candidates exist: move to the next fallback tier.
+    3. If one or more candidates exist:
+       calculate deterministic diversity score against recent bank questions.
+    4. Rank:
+       diversity_score DESC
+       question_id ASC
+    5. Select the first candidate.
+    6. STOP.
+
+    CRITICAL: Diversity MUST NEVER cause the selector to skip a difficulty tier.
     Legacy 'beginner' questions are treated as 'easy' and returned normalized.
     """
     canonical_req = normalize_difficulty(requested_difficulty)
@@ -344,7 +413,10 @@ def select_bank_question(
     else:  # easy
         diff_order = ["easy", "medium", "hard"]
 
-    used_list = list(used_question_ids)
+    used_list = list(used_question_ids) if used_question_ids else []
+
+    cols = {row["name"] for row in connection.execute("PRAGMA table_info(questions)").fetchall()}
+    has_metadata = "topic" in cols
 
     for diff in diff_order:
         params: list = [category]
@@ -361,18 +433,32 @@ def select_bank_question(
         else:
             used_clause = ""
 
-        query = f"""
-            SELECT id, category, difficulty, question
-            FROM questions
-            WHERE category = ? AND {diff_clause} {used_clause}
-            ORDER BY id ASC
-            LIMIT 1
-        """
-        row = connection.execute(query, tuple(params)).fetchone()
-        if row:
-            q_dict = dict(row)
-            q_dict["difficulty"] = normalize_difficulty(q_dict["difficulty"])
-            return q_dict, diff
+        if has_metadata:
+            query = f"""
+                SELECT id, category, difficulty, question,
+                       topic, subtopic, question_type, skill_type, quality_tier,
+                       expected_concepts, common_mistakes, ideal_answer_points, prerequisites
+                FROM questions
+                WHERE category = ? AND {diff_clause} {used_clause}
+                ORDER BY id ASC
+            """
+        else:
+            query = f"""
+                SELECT id, category, difficulty, question
+                FROM questions
+                WHERE category = ? AND {diff_clause} {used_clause}
+                ORDER BY id ASC
+            """
+
+        rows = connection.execute(query, tuple(params)).fetchall()
+        if not rows:
+            continue
+
+        candidates = [parse_question_row(r) for r in rows]
+        ranked = rank_candidates_by_diversity(candidates, recent_bank_questions)
+        selected = ranked[0]
+        selected["difficulty"] = normalize_difficulty(selected["difficulty"])
+        return selected, diff
 
     return None, None
 
@@ -429,11 +515,13 @@ def decide_next_turn(connection, session_id: int) -> dict:
             target_diff = adapt_difficulty(last_diff, cat_data["recent_scores"])
             reason = cat_data["state"].lower()
 
+        recent_bank_q = get_recent_bank_questions(connection, session_id, limit=3)
         question, actual_diff = select_bank_question(
             connection,
             selected_cat,
             target_diff,
-            state["used_question_ids"]
+            state["used_question_ids"],
+            recent_bank_questions=recent_bank_q
         )
 
         if question is not None and actual_diff is not None:

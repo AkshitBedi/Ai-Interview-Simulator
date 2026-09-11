@@ -735,5 +735,83 @@ class TestStrategyEngine(unittest.TestCase):
         self.assertEqual(turn2_q["question_id"], 3)
 
 
+class TestInvalidCategoryRuntimeExclusion(unittest.TestCase):
+    """
+    Phase 10: Regression tests verifying that invalid/artifact categories (e.g. 'string' from ID 4)
+    are excluded from runtime category discovery, coverage targets, and ranking, while ID 4
+    remains physically untouched in the database.
+    """
+
+    def setUp(self):
+        self.conn = sqlite3.connect(":memory:")
+        self.conn.row_factory = sqlite3.Row
+        create_test_schema(self.conn)
+
+        # Seed canonical categories
+        self.conn.execute("INSERT INTO questions (id, category, difficulty, question) VALUES (1, 'Python', 'medium', 'Python Q1')")
+        self.conn.execute("INSERT INTO questions (id, category, difficulty, question) VALUES (2, 'Databases', 'medium', 'DB Q1')")
+        self.conn.execute("INSERT INTO questions (id, category, difficulty, question) VALUES (3, 'System Design', 'medium', 'SD Q1')")
+        self.conn.execute("INSERT INTO questions (id, category, difficulty, question) VALUES (5, 'Behavioral', 'medium', 'Behavioral Q1')")
+
+        # Seed invalid artifact row ID 4
+        self.conn.execute("INSERT INTO questions (id, category, difficulty, question) VALUES (4, 'string', 'string', 'stringstri')")
+        self.conn.commit()
+
+    def tearDown(self):
+        self.conn.close()
+
+    def test_invalid_category_excluded_from_all_session_category_discovery(self):
+        """Invalid category 'string' in questions table is excluded from All-session discovery."""
+        session = interview_engine.start_session(self.conn, category="All", max_turns=8)
+        state = strategy_engine.build_interview_state(self.conn, session["session_id"])
+        self.assertNotIn("string", state["available_categories"])
+        self.assertEqual(
+            sorted(state["available_categories"]),
+            ["Behavioral", "Databases", "Python", "System Design"]
+        )
+
+    def test_coverage_target_based_only_on_canonical_categories(self):
+        """Coverage target is based only on the 4 canonical categories, not 5."""
+        # For max_turns=10: with 4 categories, min(4, 10//2) = 4. (If 'string' leaked, it would be 5).
+        session = interview_engine.start_session(self.conn, category="All", max_turns=10)
+        state = strategy_engine.build_interview_state(self.conn, session["session_id"])
+        self.assertEqual(state["coverage_target"], 4)
+        self.assertEqual(len(state["available_categories"]), 4)
+
+    def test_adaptive_category_ranking_does_not_include_invalid_category(self):
+        """Adaptive category ranking never includes 'string'."""
+        session = interview_engine.start_session(self.conn, category="All", max_turns=8)
+        state = strategy_engine.build_interview_state(self.conn, session["session_id"])
+        ranked = strategy_engine.rank_categories_deterministically(
+            state["categories"], state["coverage_target"]
+        )
+        self.assertNotIn("string", ranked)
+        self.assertEqual(set(ranked), {"Behavioral", "Databases", "Python", "System Design"})
+
+    def test_id_4_remains_physically_present_in_db(self):
+        """Row ID 4 remains physically present in the questions table and untouched."""
+        row = self.conn.execute("SELECT id, category, difficulty, question FROM questions WHERE id = 4").fetchone()
+        self.assertIsNotNone(row)
+        self.assertEqual(row["id"], 4)
+        self.assertEqual(row["category"], "string")
+        self.assertEqual(row["difficulty"], "string")
+        self.assertEqual(row["question"], "stringstri")
+
+    def test_valid_categories_continue_to_work_normally(self):
+        """Canonical categories are selected and progress normally in an adaptive session."""
+        session = interview_engine.start_session(self.conn, category="All", max_turns=4)
+        s_id = session["session_id"]
+        # Turn 1: Behavioral (alphabetical first among unseen)
+        self.assertEqual(session["question"]["category"], "Behavioral")
+        self.assertEqual(session["question"]["question_id"], 5)
+
+        # Advance Turn 1
+        res1 = interview_engine.record_answer_and_advance(self.conn, s_id, "Behavioral answer", MockEvaluation(score=7.0))
+        self.assertEqual(res1["status"], "active")
+        # Turn 2: Databases (alphabetical next among unseen)
+        self.assertEqual(res1["next_question"]["category"], "Databases")
+        self.assertEqual(res1["next_question"]["question_id"], 2)
+
+
 if __name__ == "__main__":
     unittest.main()

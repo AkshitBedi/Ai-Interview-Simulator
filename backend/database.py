@@ -11,6 +11,8 @@ def get_db():
     return connection
 
 
+
+
 def create_tables():
     connection = get_db()
 
@@ -19,9 +21,45 @@ def create_tables():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category TEXT NOT NULL,
             difficulty TEXT NOT NULL,
-            question TEXT NOT NULL
+            question TEXT NOT NULL,
+            topic TEXT DEFAULT NULL,
+            subtopic TEXT DEFAULT NULL,
+            question_type TEXT DEFAULT NULL,
+            skill_type TEXT DEFAULT NULL,
+            quality_tier TEXT DEFAULT 'core',
+            expected_concepts TEXT DEFAULT '[]',
+            common_mistakes TEXT DEFAULT '[]',
+            ideal_answer_points TEXT DEFAULT '[]',
+            prerequisites TEXT DEFAULT '[]'
         )
     """)
+
+    # Migrate existing questions table to include Phase 10 rich metadata columns
+    question_cols = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(questions)").fetchall()
+    }
+    metadata_cols = [
+        ("topic", "TEXT DEFAULT NULL"),
+        ("subtopic", "TEXT DEFAULT NULL"),
+        ("question_type", "TEXT DEFAULT NULL"),
+        ("skill_type", "TEXT DEFAULT NULL"),
+        ("quality_tier", "TEXT DEFAULT 'core'"),
+        ("expected_concepts", "TEXT DEFAULT '[]'"),
+        ("common_mistakes", "TEXT DEFAULT '[]'"),
+        ("ideal_answer_points", "TEXT DEFAULT '[]'"),
+        ("prerequisites", "TEXT DEFAULT '[]'"),
+    ]
+    for col_name, col_def in metadata_cols:
+        if col_name not in question_cols:
+            connection.execute(f"ALTER TABLE questions ADD COLUMN {col_name} {col_def}")
+
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_questions_category_diff ON questions(category, difficulty)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_questions_topic ON questions(topic)"
+    )
 
     answers_exists = connection.execute("""
         SELECT 1
@@ -264,29 +302,17 @@ def create_tables():
         "CREATE INDEX IF NOT EXISTS idx_nonverbal_analytics_answer_id ON nonverbal_analytics(answer_id)"
     )
 
-    # Seed baseline question bank if empty or placeholder only
+    # Seed or enrich question bank with Phase 10 expanded catalog
     seed_count = connection.execute(
         "SELECT COUNT(*) FROM questions WHERE question != 'stringstri'"
     ).fetchone()[0]
 
-    if seed_count < 5:
-        initial_questions = [
-            ("Python", "medium", "Explain how memory management and the Global Interpreter Lock (GIL) work in CPython."),
-            ("Python", "beginner", "What are Python generators and the yield keyword, and when would you use them over a standard list?"),
-            ("Python", "medium", "Explain how Python decorators work under the hood, and how you would write a decorator that accepts arguments."),
-            ("Python", "hard", "How does Python's asyncio event loop handle cooperative multitasking for high-concurrency I/O?"),
-            ("Databases", "medium", "Explain the difference between clustered and non-clustered indexes in relational databases."),
-            ("Databases", "hard", "What are ACID properties in database transactions, and how does isolation level affect concurrency anomalies?"),
-            ("Databases", "beginner", "Explain the difference between INNER JOIN, LEFT JOIN, and FULL OUTER JOIN with practical examples."),
-            ("System Design", "medium", "What is the difference between horizontal and vertical scaling, and what challenges arise with horizontal scaling?"),
-            ("System Design", "hard", "Explain how caching strategies like Cache-Aside, Write-Through, and Write-Back work."),
-            ("Behavioral", "medium", "Describe a challenging technical bug or outage you diagnosed. What was your debugging methodology?"),
-            ("Behavioral", "medium", "How do you handle disagreement with a teammate or lead regarding architectural decisions or code reviews?")
-        ]
-        connection.executemany(
-            "INSERT INTO questions (category, difficulty, question) VALUES (?, ?, ?)",
-            initial_questions
-        )
+    if seed_count < 100:
+        try:
+            from backend.question_bank import seed_question_bank
+        except (ImportError, ValueError):
+            from question_bank import seed_question_bank
+        seed_question_bank(connection)
 
     connection.commit()
     connection.close()

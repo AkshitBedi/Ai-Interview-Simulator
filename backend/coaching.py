@@ -20,9 +20,19 @@ from pydantic import BaseModel, Field
 # Constants & Thresholds
 # ---------------------------------------------------------------------------
 
-# Technical Category Status Thresholds (Phase 6/7 canonical)
-TECH_STRONG_THRESHOLD = 7.0
-TECH_MODERATE_THRESHOLD = 6.0
+# Technical Category Status Thresholds & Helper (Phase 6/7 canonical shared via category_classifier)
+try:
+    from .category_classifier import (
+        TECH_STRONG_THRESHOLD,
+        TECH_MODERATE_THRESHOLD,
+        compute_category_status,
+    )
+except (ImportError, ValueError):
+    from category_classifier import (
+        TECH_STRONG_THRESHOLD,
+        TECH_MODERATE_THRESHOLD,
+        compute_category_status,
+    )
 
 # Speech Metric Thresholds (Phase 4 canonical)
 WPM_RUSHED_THRESHOLD = 185.0
@@ -141,15 +151,6 @@ def resolve_effective_category(
         return session_category.strip()
     return "General"
 
-
-def compute_category_status(avg_score: float) -> str:
-    """Phase 6/7 canonical category status."""
-    if avg_score >= TECH_STRONG_THRESHOLD:
-        return "strong"
-    elif avg_score >= TECH_MODERATE_THRESHOLD:
-        return "moderate"
-    else:
-        return "needs_focus"
 
 
 # ---------------------------------------------------------------------------
