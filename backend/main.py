@@ -116,6 +116,7 @@ try:
         authenticate_request,
         authorize_session,
         validate_auth_configuration,
+        is_production,
     )
 except (ImportError, ValueError):
     from auth import (
@@ -132,28 +133,48 @@ except (ImportError, ValueError):
         authenticate_request,
         authorize_session,
         validate_auth_configuration,
+        is_production,
     )
 
 
 app = FastAPI()
 
 # Phase 16: Configurable CORS supporting credentials without wildcard origin
-frontend_origin_env = os.environ.get("FRONTEND_ORIGIN")
-if frontend_origin_env:
-    allowed_origins = [orig.strip() for orig in frontend_origin_env.split(",") if orig.strip()]
-else:
-    allowed_origins = [
+def get_allowed_origins() -> list[str]:
+    frontend_origin_env = os.environ.get("FRONTEND_ORIGIN")
+    if frontend_origin_env:
+        return [orig.strip() for orig in frontend_origin_env.split(",") if orig.strip()]
+    if is_production():
+        # Production requires explicit configured origins and never inherits "null" or local ports
+        return []
+    # Development / local preview mode
+    return [
         "http://localhost:8000",
         "http://127.0.0.1:8000",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+        "null",
     ]
+
+
+class DynamicAllowedOrigins:
+    def __contains__(self, origin: object) -> bool:
+        return origin in get_allowed_origins()
+
+    def __iter__(self):
+        return iter(get_allowed_origins())
+
+    def __len__(self):
+        return len(get_allowed_origins())
+
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=DynamicAllowedOrigins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

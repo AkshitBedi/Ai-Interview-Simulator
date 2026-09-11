@@ -776,6 +776,53 @@ class TestPhase16Auth(unittest.TestCase):
         self.assertNotIn("sessionStorage.setItem('token", html)
         self.assertNotIn("sessionStorage.setItem('password", html)
 
+    def test_54b_auth_modal_not_nested_in_hidden_tab_containers(self):
+        with open("web/index.html", "r", encoding="utf-8") as f:
+            html = f.read()
+
+        # The analytics container is hidden by default.
+        # auth-modal and account-history-modal must be closed outside analytics-container.
+        analytics_container_idx = html.find('id="analytics-container"')
+        self.assertNotEqual(analytics_container_idx, -1)
+
+        auth_modal_idx = html.find('id="auth-modal"')
+        self.assertNotEqual(auth_modal_idx, -1)
+
+        account_history_modal_idx = html.find('id="account-history-modal"')
+        self.assertNotEqual(account_history_modal_idx, -1)
+
+        # Check that analytics-container closes before auth-modal
+        # Find closing div of analytics-container
+        after_analytics = html[analytics_container_idx:auth_modal_idx]
+        self.assertIn("</div>", after_analytics)
+
+        # Verify CORS development behavior (port 5500 and null)
+        client = TestClient(app)
+        resp_null = client.get("/auth/me", headers={"Origin": "null"})
+        self.assertEqual(resp_null.headers.get("access-control-allow-origin"), "null")
+        resp_5500 = client.get("/auth/me", headers={"Origin": "http://127.0.0.1:5500"})
+        self.assertEqual(resp_5500.headers.get("access-control-allow-origin"), "http://127.0.0.1:5500")
+        resp_loc_5500 = client.get("/auth/me", headers={"Origin": "http://localhost:5500"})
+        self.assertEqual(resp_loc_5500.headers.get("access-control-allow-origin"), "http://localhost:5500")
+
+        # Verify CORS production behavior: null and dev ports are excluded by default
+        with patch.dict(os.environ, {"ENVIRONMENT": "production", "AUTH_SECRET_KEY": "valid-key-for-test-123456"}):
+            resp_prod_null = client.get("/auth/me", headers={"Origin": "null"})
+            self.assertIsNone(resp_prod_null.headers.get("access-control-allow-origin"))
+            resp_prod_5500 = client.get("/auth/me", headers={"Origin": "http://127.0.0.1:5500"})
+            self.assertIsNone(resp_prod_5500.headers.get("access-control-allow-origin"))
+
+        # Verify CORS production with explicit FRONTEND_ORIGIN: only explicit origin is allowed
+        with patch.dict(os.environ, {
+            "ENVIRONMENT": "production",
+            "FRONTEND_ORIGIN": "https://myinterviewapp.com",
+            "AUTH_SECRET_KEY": "valid-key-for-test-123456"
+        }):
+            resp_prod_explicit = client.get("/auth/me", headers={"Origin": "https://myinterviewapp.com"})
+            self.assertEqual(resp_prod_explicit.headers.get("access-control-allow-origin"), "https://myinterviewapp.com")
+            resp_prod_null_explicit = client.get("/auth/me", headers={"Origin": "null"})
+            self.assertIsNone(resp_prod_null_explicit.headers.get("access-control-allow-origin"))
+
     # =======================================================================
     # 9. PRODUCTION MODE & AUTH_SECRET_KEY HARDENING (55 - 58)
     # =======================================================================
