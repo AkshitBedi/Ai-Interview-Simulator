@@ -271,23 +271,57 @@ def start_session(
     categories: list[str] | None = None,
     target_role: str | None = None,
     experience_level: str | None = "mid",
-    interviewer_style: str | None = "professional"
+    interviewer_style: str | None = "professional",
+    candidate_profile: dict | None = None,
+    job_context: dict | None = None
 ) -> dict:
     """
     Initializes a new interview session and selects the first question deterministically via strategy_engine.
     """
     canonical_diff = strategy_engine.normalize_difficulty(difficulty) if difficulty else None
 
+    # Target role fallback: If target_role is omitted/blank, default to job_context.title if present
+    effective_role = target_role
+    if (effective_role is None or not str(effective_role).strip()) and job_context:
+        j_title = job_context.get("title") if isinstance(job_context, dict) else getattr(job_context, "title", None)
+        if j_title and str(j_title).strip():
+            effective_role = str(j_title).strip()[:100]
+
     stored_category, normalized_selected, clean_role, clean_exp, clean_style = normalize_session_configuration(
         category=category,
         categories=categories,
-        target_role=target_role,
+        target_role=effective_role,
         experience_level=experience_level,
         interviewer_style=interviewer_style
     )
 
+    profile_json = json.dumps(candidate_profile) if candidate_profile is not None else None
+    job_json = json.dumps(job_context) if job_context is not None else None
+
     cols = {row["name"] for row in connection.execute("PRAGMA table_info(interview_sessions)").fetchall()}
-    if "selected_categories" in cols:
+    if "candidate_profile" in cols and "job_context" in cols:
+        cursor = connection.execute(
+            """
+            INSERT INTO interview_sessions (
+                category, difficulty, max_turns, status, current_turn,
+                target_role, experience_level, selected_categories, interviewer_style,
+                candidate_profile, job_context
+            )
+            VALUES (?, ?, ?, 'active', 1, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                stored_category,
+                canonical_diff,
+                max_turns,
+                clean_role,
+                clean_exp,
+                json.dumps(normalized_selected),
+                clean_style,
+                profile_json,
+                job_json
+            )
+        )
+    elif "selected_categories" in cols:
         cursor = connection.execute(
             """
             INSERT INTO interview_sessions (
@@ -345,6 +379,8 @@ def start_session(
         "experience_level": clean_exp,
         "selected_categories": normalized_selected,
         "interviewer_style": clean_style,
+        "candidate_profile": candidate_profile,
+        "job_context": job_context,
         "question": {
             "turn_id": turn_cursor.lastrowid,
             "turn_number": 1,
@@ -500,6 +536,8 @@ def get_session_details(connection, session_id: int) -> dict | None:
         "experience_level": session_row["experience_level"] if ("experience_level" in session_row.keys() and session_row["experience_level"]) else "mid",
         "selected_categories": json.loads(session_row["selected_categories"]) if ("selected_categories" in session_row.keys() and session_row["selected_categories"]) else None,
         "interviewer_style": session_row["interviewer_style"] if ("interviewer_style" in session_row.keys() and session_row["interviewer_style"]) else "professional",
+        "candidate_profile": json.loads(session_row["candidate_profile"]) if ("candidate_profile" in session_row.keys() and session_row["candidate_profile"]) else None,
+        "job_context": json.loads(session_row["job_context"]) if ("job_context" in session_row.keys() and session_row["job_context"]) else None,
         "active_question": active_turn,
         "turns": turns
     }
@@ -787,6 +825,9 @@ def record_answer_and_advance(
 
         connection.commit()
 
+        profile_dict = json.loads(session_row["candidate_profile"]) if ("candidate_profile" in session_row.keys() and session_row["candidate_profile"]) else None
+        job_dict = json.loads(session_row["job_context"]) if ("job_context" in session_row.keys() and session_row["job_context"]) else None
+
         # Phase 8: Conversational wording for follow-up
         interviewer_ctx = interviewer.build_interviewer_context(
             current_category=current_cat,
@@ -801,7 +842,9 @@ def record_answer_and_advance(
             next_question_text=follow_up_text,
             recent_turns=recent_turns,
             target_role=session_row["target_role"] if "target_role" in session_row.keys() else None,
-            experience_level=session_row["experience_level"] if "experience_level" in session_row.keys() else "mid"
+            experience_level=session_row["experience_level"] if "experience_level" in session_row.keys() else "mid",
+            candidate_profile=profile_dict,
+            job_context=job_dict
         )
         try:
             interviewer_out = interviewer.generate_interviewer_response(
@@ -862,6 +905,9 @@ def record_answer_and_advance(
             next_cat = next_bank_q["category"]
             is_same_cat = bool(current_cat and next_cat and current_cat.strip().lower() == next_cat.strip().lower())
 
+            profile_dict = json.loads(session_row["candidate_profile"]) if ("candidate_profile" in session_row.keys() and session_row["candidate_profile"]) else None
+            job_dict = json.loads(session_row["job_context"]) if ("job_context" in session_row.keys() and session_row["job_context"]) else None
+
             interviewer_ctx = interviewer.build_interviewer_context(
                 current_category=current_cat,
                 current_difficulty=current_diff,
@@ -875,7 +921,9 @@ def record_answer_and_advance(
                 next_question_text=next_bank_q["question"],
                 recent_turns=recent_turns,
                 target_role=session_row["target_role"] if "target_role" in session_row.keys() else None,
-                experience_level=session_row["experience_level"] if "experience_level" in session_row.keys() else "mid"
+                experience_level=session_row["experience_level"] if "experience_level" in session_row.keys() else "mid",
+                candidate_profile=profile_dict,
+                job_context=job_dict
             )
             try:
                 interviewer_out = interviewer.generate_interviewer_response(
@@ -1124,6 +1172,8 @@ def get_session_summary(connection, session_id: int) -> dict | None:
         "experience_level": session["experience_level"] if ("experience_level" in session.keys() and session["experience_level"]) else "mid",
         "selected_categories": json.loads(session["selected_categories"]) if ("selected_categories" in session.keys() and session["selected_categories"]) else None,
         "interviewer_style": session["interviewer_style"] if ("interviewer_style" in session.keys() and session["interviewer_style"]) else "professional",
+        "candidate_profile": json.loads(session["candidate_profile"]) if ("candidate_profile" in session.keys() and session["candidate_profile"]) else None,
+        "job_context": json.loads(session["job_context"]) if ("job_context" in session.keys() and session["job_context"]) else None,
         "total_turns_evaluated": len(evaluated_turns),
         "bank_questions_count": bank_count,
         "follow_up_questions_count": follow_up_count,

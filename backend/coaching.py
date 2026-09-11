@@ -832,6 +832,14 @@ def build_coaching_signals(connection: sqlite3.Connection, session_id: int) -> d
             "recommended_count": 3
         })
 
+    raw_job = session_row["job_context"] if "job_context" in session_row.keys() else None
+    job_ctx = None
+    if raw_job:
+        try:
+            job_ctx = json.loads(raw_job) if isinstance(raw_job, str) else raw_job
+        except Exception:
+            job_ctx = None
+
     # Assemble final deterministic coaching signals object
     return {
         "session_id": session_id,
@@ -840,7 +848,8 @@ def build_coaching_signals(connection: sqlite3.Connection, session_id: int) -> d
         "nonverbal": nonverbal_signals,
         "strengths": strengths_list,
         "improvement_areas": top_priorities,
-        "practice_recommendations": practice_recommendations
+        "practice_recommendations": practice_recommendations,
+        "job_context": job_ctx
     }
 
 
@@ -920,9 +929,19 @@ def build_gemini_coaching_context(signals: dict[str, Any]) -> dict[str, Any]:
     else:
         ctx["nonverbal_summary"] = None
 
+    if signals.get("job_context"):
+        j = signals["job_context"]
+        ctx["target_job"] = {
+            "title": j.get("title"),
+            "required_skills": j.get("required_skills", [])[:5],
+            "responsibilities": j.get("responsibilities", [])[:3]
+        }
+
     # Progressive trimming loop strictly enforcing MAX_CONTEXT_BYTES (4096 bytes)
     while len(json.dumps(ctx, ensure_ascii=False).encode("utf-8")) > MAX_CONTEXT_BYTES:
-        if ctx.get("communication_summary") and len(ctx["communication_summary"].get("observed_issues", [])) > 1:
+        if ctx.get("target_job") and len(ctx["target_job"].get("responsibilities", [])) > 1:
+            ctx["target_job"]["responsibilities"] = ctx["target_job"]["responsibilities"][:1]
+        elif ctx.get("communication_summary") and len(ctx["communication_summary"].get("observed_issues", [])) > 1:
             ctx["communication_summary"]["observed_issues"] = ctx["communication_summary"]["observed_issues"][:1]
         elif ctx.get("nonverbal_summary") and len(ctx["nonverbal_summary"].get("observed_issues", [])) > 1:
             ctx["nonverbal_summary"]["observed_issues"] = ctx["nonverbal_summary"]["observed_issues"][:1]

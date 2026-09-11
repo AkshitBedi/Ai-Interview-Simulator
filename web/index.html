@@ -1114,6 +1114,40 @@
         <!-- Hidden legacy select to maintain backward compatibility with any scripts -->
         <select id="session-category" class="hidden"><option value="">Any Domain</option></select>
 
+        <!-- Phase 12: Resume & Job Description Personalization -->
+        <div class="field" style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label style="margin-bottom: 0; font-weight: bold; color: #1e3a5f;">
+              Resume & Job Description Personalization (Optional)
+            </label>
+            <span style="font-size: 0.8rem; color: var(--muted);">Paste text to personalize questions & context</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label for="session-resume-text" style="font-size: 0.85rem;">Candidate Resume</label>
+                <div>
+                  <span id="session-resume-counter" style="font-size: 0.75rem; color: var(--muted);">0 / 15,000</span>
+                  <button type="button" id="session-resume-clear" style="background: none; border: none; color: var(--blue); cursor: pointer; font-size: 0.75rem; margin-left: 6px; padding: 0;">Clear</button>
+                </div>
+              </div>
+              <textarea id="session-resume-text" rows="5" maxlength="15000" placeholder="Paste your resume or engineering background here..." style="width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px; font: inherit; font-size: 0.85rem; resize: vertical;"></textarea>
+            </div>
+
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label for="session-job-description" style="font-size: 0.85rem;">Target Job Description (JD)</label>
+                <div>
+                  <span id="session-jd-counter" style="font-size: 0.75rem; color: var(--muted);">0 / 10,000</span>
+                  <button type="button" id="session-jd-clear" style="background: none; border: none; color: var(--blue); cursor: pointer; font-size: 0.75rem; margin-left: 6px; padding: 0;">Clear</button>
+                </div>
+              </div>
+              <textarea id="session-job-description" rows="5" maxlength="10000" placeholder="Paste the target job description or requirements here..." style="width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px; font: inherit; font-size: 0.85rem; resize: vertical;"></textarea>
+            </div>
+          </div>
+        </div>
+
         <div>
           <button type="button" id="start-session-button" style="width: 100%; max-width: 260px;">
             Start Interview Session
@@ -1809,6 +1843,37 @@
       });
     }
 
+    // Phase 12: Resume & Job Description live counters and clear buttons
+    const resumeTextarea = document.getElementById("session-resume-text");
+    const resumeCounter = document.getElementById("session-resume-counter");
+    const resumeClearBtn = document.getElementById("session-resume-clear");
+    const jdTextarea = document.getElementById("session-job-description");
+    const jdCounter = document.getElementById("session-jd-counter");
+    const jdClearBtn = document.getElementById("session-jd-clear");
+
+    if (resumeTextarea && resumeCounter) {
+      resumeTextarea.addEventListener("input", () => {
+        resumeCounter.textContent = `${resumeTextarea.value.length.toLocaleString()} / 15,000`;
+      });
+    }
+    if (resumeClearBtn && resumeTextarea && resumeCounter) {
+      resumeClearBtn.addEventListener("click", () => {
+        resumeTextarea.value = "";
+        resumeCounter.textContent = "0 / 15,000";
+      });
+    }
+    if (jdTextarea && jdCounter) {
+      jdTextarea.addEventListener("input", () => {
+        jdCounter.textContent = `${jdTextarea.value.length.toLocaleString()} / 10,000`;
+      });
+    }
+    if (jdClearBtn && jdTextarea && jdCounter) {
+      jdClearBtn.addEventListener("click", () => {
+        jdTextarea.value = "";
+        jdCounter.textContent = "0 / 10,000";
+      });
+    }
+
     startSessionButton.addEventListener("click", startSession);
     sessionSubmitButton.addEventListener("click", submitSessionAnswer);
     startNewSessionButton.addEventListener("click", resetSessionView);
@@ -1962,13 +2027,20 @@
           ? sessionInterviewerStyleSelect.value
           : "professional";
 
+        const resumeInput = document.getElementById("session-resume-text");
+        const jdInput = document.getElementById("session-job-description");
+        const resumeVal = resumeInput ? resumeInput.value.trim() : "";
+        const jdVal = jdInput ? jdInput.value.trim() : "";
+
         const payload = {
           categories: selectedCats,
           difficulty: sessionDifficultySelect.value || null,
           max_turns: parseInt(sessionTurnsSelect.value, 10) || 5,
           target_role: roleVal || null,
           experience_level: expVal,
-          interviewer_style: selectedStyle
+          interviewer_style: selectedStyle,
+          resume_text: resumeVal || null,
+          job_description: jdVal || null
         };
 
         const session = await fetchApi("/sessions", {

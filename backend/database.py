@@ -209,22 +209,26 @@ def create_tables():
             target_role TEXT DEFAULT NULL,
             experience_level TEXT DEFAULT 'mid',
             selected_categories TEXT DEFAULT NULL,
-            interviewer_style TEXT DEFAULT 'professional'
+            interviewer_style TEXT DEFAULT 'professional',
+            candidate_profile TEXT DEFAULT NULL,
+            job_context TEXT DEFAULT NULL
         )
     """)
 
-    # Migrate existing interview_sessions table to include Phase 11 columns
+    # Migrate existing interview_sessions table to include Phase 11 & Phase 12 columns
     session_cols = {
         row["name"]
         for row in connection.execute("PRAGMA table_info(interview_sessions)").fetchall()
     }
-    phase11_cols = [
+    phase11_12_cols = [
         ("target_role", "TEXT DEFAULT NULL"),
         ("experience_level", "TEXT DEFAULT 'mid'"),
         ("selected_categories", "TEXT DEFAULT NULL"),
         ("interviewer_style", "TEXT DEFAULT 'professional'"),
+        ("candidate_profile", "TEXT DEFAULT NULL"),
+        ("job_context", "TEXT DEFAULT NULL"),
     ]
-    for col_name, col_def in phase11_cols:
+    for col_name, col_def in phase11_12_cols:
         if col_name not in session_cols:
             connection.execute(f"ALTER TABLE interview_sessions ADD COLUMN {col_name} {col_def}")
 

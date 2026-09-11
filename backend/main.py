@@ -22,8 +22,10 @@ try:
         start_session,
         get_session_details,
         record_answer_and_advance,
-        get_session_summary
+        get_session_summary,
+        normalize_session_configuration
     )
+    from .document_processor import extract_documents_concurrently
     from .speech_engine import transcribe_audio, TranscriptionError, is_stt_available
     from .audio_analyzer import (
         parse_wav_samples,
@@ -58,8 +60,10 @@ except (ImportError, ValueError):
         start_session,
         get_session_details,
         record_answer_and_advance,
-        get_session_summary
+        get_session_summary,
+        normalize_session_configuration
     )
+    from document_processor import extract_documents_concurrently
     from speech_engine import transcribe_audio, TranscriptionError, is_stt_available
     from audio_analyzer import (
         parse_wav_samples,
@@ -664,6 +668,8 @@ class SessionCreate(BaseModel):
     target_role: str | None = None
     experience_level: Literal["junior", "mid", "senior"] | None = "mid"
     interviewer_style: Literal["professional", "conversational", "strict"] | None = "professional"
+    resume_text: str | None = Field(default=None, max_length=15000)
+    job_description: str | None = Field(default=None, max_length=10000)
 
 
 class SessionAnswerSubmission(BaseModel):
@@ -672,7 +678,37 @@ class SessionAnswerSubmission(BaseModel):
 
 
 @app.post("/sessions", status_code=201)
-def create_session(session_data: SessionCreate):
+async def create_session(session_data: SessionCreate):
+    # STEP 1-4: Configuration pre-validation BEFORE any Gemini call (Correction #4)
+    try:
+        normalize_session_configuration(
+            category=session_data.category,
+            categories=session_data.categories,
+            target_role=session_data.target_role,
+            experience_level=session_data.experience_level,
+            interviewer_style=session_data.interviewer_style
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Normalize inputs
+    clean_resume = session_data.resume_text.strip() if session_data.resume_text and session_data.resume_text.strip() else None
+    clean_jd = session_data.job_description.strip() if session_data.job_description and session_data.job_description.strip() else None
+
+    # Length checks
+    if clean_resume and len(clean_resume) > 15000:
+        raise HTTPException(status_code=400, detail="resume_text exceeds 15,000 characters.")
+    if clean_jd and len(clean_jd) > 10000:
+        raise HTTPException(status_code=400, detail="job_description exceeds 10,000 characters.")
+
+    # STEP 5: Concurrent document extraction (Correction #3)
+    candidate_profile = None
+    job_context = None
+    if clean_resume or clean_jd:
+        profile_obj, job_obj = await extract_documents_concurrently(clean_resume, clean_jd)
+        candidate_profile = profile_obj.model_dump() if profile_obj else None
+        job_context = job_obj.model_dump() if job_obj else None
+
     connection = get_db()
     try:
         result = start_session(
@@ -683,7 +719,9 @@ def create_session(session_data: SessionCreate):
             max_turns=session_data.max_turns,
             target_role=session_data.target_role,
             experience_level=session_data.experience_level,
-            interviewer_style=session_data.interviewer_style
+            interviewer_style=session_data.interviewer_style,
+            candidate_profile=candidate_profile,
+            job_context=job_context
         )
     except ValueError as e:
         connection.close()

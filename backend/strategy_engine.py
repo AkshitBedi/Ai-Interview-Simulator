@@ -13,6 +13,7 @@ Handles:
 - Comprehensive turn decision making
 """
 
+import re
 import json
 import math
 import sqlite3
@@ -284,6 +285,14 @@ def build_interview_state(connection, session_id: int) -> dict:
     categories_covered = sum(1 for c, d in categories_state.items() if d["bank_questions_asked"] > 0)
     coverage_target = calculate_coverage_target(max_turns, len(available_categories))
 
+    raw_job = session_row["job_context"] if "job_context" in session_row.keys() else None
+    job_context = None
+    if raw_job:
+        try:
+            job_context = json.loads(raw_job) if isinstance(raw_job, str) else raw_job
+        except Exception:
+            job_context = None
+
     return {
         "session_id": session_row["id"],
         "session_category": session_row["category"],
@@ -299,7 +308,8 @@ def build_interview_state(connection, session_id: int) -> dict:
         "available_categories": available_categories,
         "coverage_target": coverage_target,
         "categories_covered": categories_covered,
-        "categories": categories_state
+        "categories": categories_state,
+        "job_context": job_context
     }
 
 
@@ -412,12 +422,103 @@ def get_recent_bank_questions(
     return [parse_question_row(r) for r in reversed(rows)]
 
 
+def extract_meaningful_tokens(text_or_list: Any) -> set[str]:
+    """
+    Extracts lowercase alphanumeric tokens (length >= 2), excluding common English stop words.
+    """
+    STOP_WORDS = {
+        "and", "the", "or", "a", "an", "in", "on", "at", "to", "for", "of", "with", "by",
+        "as", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had",
+        "do", "does", "did", "how", "what", "which", "who", "whom", "this", "that",
+        "these", "those", "from", "up", "down", "into", "over", "after", "such", "no",
+        "not", "only", "same", "so", "than", "too", "very", "can", "will", "just", "should",
+        "now", "any", "all", "both", "each", "few", "more", "most", "other", "some"
+    }
+    if not text_or_list:
+        return set()
+    if isinstance(text_or_list, list):
+        raw_text = " ".join(str(x) for x in text_or_list)
+    else:
+        raw_text = str(text_or_list)
+
+    raw_text = raw_text.lower()
+    raw_text = re.sub(r"[^\w\s+#.]", " ", raw_text)
+    words = raw_text.split()
+    tokens = set()
+    for w in words:
+        w_strip = w.strip(".,;:!?()")
+        if len(w_strip) >= 2 and w_strip not in STOP_WORDS:
+            tokens.add(w_strip)
+    return tokens
+
+
+def calculate_jd_relevance_bonus(
+    question: dict[str, Any],
+    job_context: dict[str, Any] | None
+) -> float:
+    """
+    Calculates deterministic JD relevance bonus (0.0 to 3.0) for a candidate question.
+    - Required skills token weight: 1.0
+    - Preferred skills token weight: 0.5
+    - Question expected_concepts match weight: 2.0
+    - Question topic/subtopic match weight: 1.0
+    - Question text match weight: 0.5
+    RawScore = sum of matched weights
+    bonus = min(3.0, round(RawScore * 0.5, 2))
+    """
+    if not job_context or not isinstance(job_context, dict):
+        return 0.0
+
+    req_tokens = extract_meaningful_tokens(job_context.get("required_skills", []))
+    pref_tokens = extract_meaningful_tokens(job_context.get("preferred_skills", []))
+
+    if not req_tokens and not pref_tokens:
+        return 0.0
+
+    eq_tokens = extract_meaningful_tokens(question.get("expected_concepts", []))
+    tq_tokens = extract_meaningful_tokens([
+        question.get("topic") or "",
+        question.get("subtopic") or ""
+    ])
+    wq_tokens = extract_meaningful_tokens(question.get("question") or "")
+
+    raw_score = 0.0
+
+    # Score required skills
+    for tok in req_tokens:
+        tok_score = 0.0
+        if tok in eq_tokens:
+            tok_score += 2.0
+        if tok in tq_tokens:
+            tok_score += 1.0
+        if tok in wq_tokens:
+            tok_score += 0.5
+        raw_score += (tok_score * 1.0)
+
+    # Score preferred skills
+    for tok in pref_tokens:
+        if tok in req_tokens:
+            continue
+        tok_score = 0.0
+        if tok in eq_tokens:
+            tok_score += 2.0
+        if tok in tq_tokens:
+            tok_score += 1.0
+        if tok in wq_tokens:
+            tok_score += 0.5
+        raw_score += (tok_score * 0.5)
+
+    bonus = min(3.0, round(raw_score * 0.5, 2))
+    return bonus
+
+
 def select_bank_question(
     connection: sqlite3.Connection,
     category: str,
     requested_difficulty: str,
     used_question_ids: set[int] | None = None,
     recent_bank_questions: list[dict[str, Any]] | None = None,
+    job_context: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any] | None, str | None]:
     """
     Selects a bank question for the specified category and target difficulty.
@@ -431,14 +532,14 @@ def select_bank_question(
     1. Query eligible unused questions in the selected category and current tier.
     2. If ZERO eligible candidates exist: move to the next fallback tier.
     3. If one or more candidates exist:
-       calculate deterministic diversity score against recent bank questions.
+       calculate deterministic diversity score + JD relevance bonus.
     4. Rank:
-       diversity_score DESC
+       final_score (diversity_score + jd_relevance_bonus) DESC
        question_id ASC
     5. Select the first candidate.
     6. STOP.
 
-    CRITICAL: Diversity MUST NEVER cause the selector to skip a difficulty tier.
+    CRITICAL: Diversity and JD relevance MUST NEVER cause the selector to skip a difficulty tier.
     Legacy 'beginner' questions are treated as 'easy' and returned normalized.
     """
     canonical_req = normalize_difficulty(requested_difficulty)
@@ -492,8 +593,19 @@ def select_bank_question(
             continue
 
         candidates = [parse_question_row(r) for r in rows]
-        ranked = rank_candidates_by_diversity(candidates, recent_bank_questions)
-        selected = ranked[0]
+        scored_candidates = []
+        for cand in candidates:
+            c_copy = dict(cand)
+            div_score = calculate_diversity_score(c_copy, recent_bank_questions or [])
+            jd_bonus = calculate_jd_relevance_bonus(c_copy, job_context) if job_context else 0.0
+            final_score = round(div_score + jd_bonus, 2)
+            c_copy["diversity_score"] = div_score
+            c_copy["jd_relevance_bonus"] = jd_bonus
+            c_copy["final_selection_score"] = final_score
+            scored_candidates.append(c_copy)
+
+        scored_candidates.sort(key=lambda q: (-q["final_selection_score"], q.get("id") or 0))
+        selected = scored_candidates[0]
         selected["difficulty"] = normalize_difficulty(selected["difficulty"])
         return selected, diff
 
@@ -558,7 +670,8 @@ def decide_next_turn(connection, session_id: int) -> dict:
             selected_cat,
             target_diff,
             state["used_question_ids"],
-            recent_bank_questions=recent_bank_q
+            recent_bank_questions=recent_bank_q,
+            job_context=state.get("job_context")
         )
 
         if question is not None and actual_diff is not None:
