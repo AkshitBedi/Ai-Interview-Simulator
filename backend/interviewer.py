@@ -54,12 +54,12 @@ def normalize_interviewer_style(style: str | None) -> str:
 def get_allowed_response_types(action: str, is_same_category: bool) -> list[str]:
     """
     Returns the authoritative allowed response_types for a given Phase 7 strategy action:
-    - follow_up -> ['probe', 'clarification', 'challenge']
+    - follow_up / claim_probe -> ['probe', 'clarification', 'challenge']
     - new_bank_question + same category -> ['acknowledgement']
     - new_bank_question + diff category -> ['transition']
     - completed / bank_exhausted -> []
     """
-    if action == "follow_up":
+    if action in ("follow_up", "claim_probe"):
         return ["probe", "clarification", "challenge"]
     elif action == "new_bank_question":
         if is_same_category:
@@ -82,7 +82,7 @@ def get_deterministic_fallback(
     Returns canonical deterministic fallback wording without requiring Gemini.
     Guaranteed to strictly respect the action -> response_type mapping and normalized style.
     Canonical fallbacks:
-    - follow_up -> probe
+    - follow_up / claim_probe -> probe
     - same-category new_bank_question -> acknowledgement
     - cross-category new_bank_question -> transition
     - completed / bank_exhausted -> null
@@ -90,7 +90,7 @@ def get_deterministic_fallback(
     style_key = normalize_interviewer_style(style)
     cat_str = next_category.strip() if next_category and next_category.strip() else "the next topic"
 
-    if action == "follow_up":
+    if action in ("follow_up", "claim_probe"):
         r_type = response_type if response_type in ["probe", "clarification", "challenge"] else "probe"
 
         if r_type == "clarification":
@@ -173,7 +173,8 @@ def build_interviewer_context(
     target_role: str | None = None,
     experience_level: str | None = None,
     candidate_profile: dict | None = None,
-    job_context: dict | None = None
+    job_context: dict | None = None,
+    active_claim: dict | None = None
 ) -> dict:
     """
     Builds a strictly bounded context payload for the interviewer prompt.
@@ -215,8 +216,10 @@ def build_interviewer_context(
     q_next = (next_question_text or "").strip()
 
     compact_cj = None
-    if compact_profile_and_job_context and (candidate_profile or job_context):
-        compact_cj = compact_profile_and_job_context(candidate_profile, job_context, max_bytes=700)
+    if compact_profile_and_job_context and (candidate_profile or job_context or active_claim):
+        compact_cj = compact_profile_and_job_context(
+            candidate_profile, job_context, max_bytes=700, active_claim=active_claim
+        )
 
     context = {
         "current_category": current_category or "General Technical",

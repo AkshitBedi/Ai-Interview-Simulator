@@ -247,6 +247,7 @@ def create_tables():
             parent_turn_id INTEGER,
             answer_id INTEGER,
             status TEXT NOT NULL DEFAULT 'pending',
+            claim_id TEXT DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (session_id) REFERENCES interview_sessions(id) ON DELETE CASCADE,
             FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE SET NULL,
@@ -254,6 +255,14 @@ def create_tables():
             FOREIGN KEY (answer_id) REFERENCES answers(id) ON DELETE SET NULL
         )
     """)
+
+    # Phase 13: Migrate existing session_turns table to include claim_id column
+    turn_cols = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(session_turns)").fetchall()
+    }
+    if "claim_id" not in turn_cols:
+        connection.execute("ALTER TABLE session_turns ADD COLUMN claim_id TEXT DEFAULT NULL")
 
     connection.execute(
         "CREATE INDEX IF NOT EXISTS idx_session_turns_session ON session_turns(session_id)"
@@ -263,6 +272,9 @@ def create_tables():
     )
     connection.execute(
         "CREATE INDEX IF NOT EXISTS idx_session_turns_answer ON session_turns(answer_id)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_session_turns_claim ON session_turns(claim_id)"
     )
 
     # Phase 4: Speech Analytics and Communication Intelligence
