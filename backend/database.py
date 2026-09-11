@@ -195,6 +195,20 @@ def create_tables():
         "CREATE INDEX IF NOT EXISTS idx_evaluations_answer_id ON evaluations(answer_id)"
     )
 
+    # Phase 16: Users table
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_login_at TIMESTAMP DEFAULT NULL
+        )
+    """)
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)"
+    )
+
     # Phase 3: Interview sessions and conversational turns
     connection.execute("""
         CREATE TABLE IF NOT EXISTS interview_sessions (
@@ -211,29 +225,40 @@ def create_tables():
             selected_categories TEXT DEFAULT NULL,
             interviewer_style TEXT DEFAULT 'professional',
             candidate_profile TEXT DEFAULT NULL,
-            job_context TEXT DEFAULT NULL
+            job_context TEXT DEFAULT NULL,
+            user_id INTEGER DEFAULT NULL,
+            guest_id TEXT DEFAULT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
         )
     """)
 
-    # Migrate existing interview_sessions table to include Phase 11 & Phase 12 columns
+    # Migrate existing interview_sessions table to include Phase 11, 12 & 16 columns
     session_cols = {
         row["name"]
         for row in connection.execute("PRAGMA table_info(interview_sessions)").fetchall()
     }
-    phase11_12_cols = [
+    phase11_12_16_cols = [
         ("target_role", "TEXT DEFAULT NULL"),
         ("experience_level", "TEXT DEFAULT 'mid'"),
         ("selected_categories", "TEXT DEFAULT NULL"),
         ("interviewer_style", "TEXT DEFAULT 'professional'"),
         ("candidate_profile", "TEXT DEFAULT NULL"),
         ("job_context", "TEXT DEFAULT NULL"),
+        ("user_id", "INTEGER DEFAULT NULL"),
+        ("guest_id", "TEXT DEFAULT NULL"),
     ]
-    for col_name, col_def in phase11_12_cols:
+    for col_name, col_def in phase11_12_16_cols:
         if col_name not in session_cols:
             connection.execute(f"ALTER TABLE interview_sessions ADD COLUMN {col_name} {col_def}")
 
     connection.execute(
         "CREATE INDEX IF NOT EXISTS idx_sessions_status ON interview_sessions(status)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON interview_sessions(user_id)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sessions_guest_id ON interview_sessions(guest_id)"
     )
 
     connection.execute("""

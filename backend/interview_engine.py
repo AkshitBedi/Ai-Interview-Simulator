@@ -800,7 +800,9 @@ def start_session(
     experience_level: str | None = "mid",
     interviewer_style: str | None = "professional",
     candidate_profile: dict | None = None,
-    job_context: dict | None = None
+    job_context: dict | None = None,
+    user_id: int | None = None,
+    guest_id: str | None = None
 ) -> dict:
     """
     Initializes a new interview session and selects the first question deterministically via strategy_engine.
@@ -827,27 +829,52 @@ def start_session(
 
     cols = {row["name"] for row in connection.execute("PRAGMA table_info(interview_sessions)").fetchall()}
     if "candidate_profile" in cols and "job_context" in cols:
-        cursor = connection.execute(
-            """
-            INSERT INTO interview_sessions (
-                category, difficulty, max_turns, status, current_turn,
-                target_role, experience_level, selected_categories, interviewer_style,
-                candidate_profile, job_context
+        if "user_id" in cols and "guest_id" in cols:
+            cursor = connection.execute(
+                """
+                INSERT INTO interview_sessions (
+                    category, difficulty, max_turns, status, current_turn,
+                    target_role, experience_level, selected_categories, interviewer_style,
+                    candidate_profile, job_context, user_id, guest_id
+                )
+                VALUES (?, ?, ?, 'active', 1, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    stored_category,
+                    canonical_diff,
+                    max_turns,
+                    clean_role,
+                    clean_exp,
+                    json.dumps(normalized_selected),
+                    clean_style,
+                    profile_json,
+                    job_json,
+                    user_id,
+                    guest_id
+                )
             )
-            VALUES (?, ?, ?, 'active', 1, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                stored_category,
-                canonical_diff,
-                max_turns,
-                clean_role,
-                clean_exp,
-                json.dumps(normalized_selected),
-                clean_style,
-                profile_json,
-                job_json
+        else:
+            cursor = connection.execute(
+                """
+                INSERT INTO interview_sessions (
+                    category, difficulty, max_turns, status, current_turn,
+                    target_role, experience_level, selected_categories, interviewer_style,
+                    candidate_profile, job_context
+                )
+                VALUES (?, ?, ?, 'active', 1, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    stored_category,
+                    canonical_diff,
+                    max_turns,
+                    clean_role,
+                    clean_exp,
+                    json.dumps(normalized_selected),
+                    clean_style,
+                    profile_json,
+                    job_json
+                )
             )
-        )
     elif "selected_categories" in cols:
         cursor = connection.execute(
             """

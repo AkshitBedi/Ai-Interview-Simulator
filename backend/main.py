@@ -94,21 +94,85 @@ except (ImportError, ValueError):
         parse_string_list,
         parse_question_row,
     )
+from datetime import datetime, timezone
+import secrets
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
-from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
+
+try:
+    from .auth import (
+        AuthContext,
+        UserRegisterRequest,
+        UserLoginRequest,
+        UserSafeResponse,
+        normalize_email,
+        hash_password,
+        verify_password,
+        set_account_cookie,
+        set_guest_cookie,
+        clear_account_cookie,
+        authenticate_request,
+        authorize_session,
+        validate_auth_configuration,
+    )
+except (ImportError, ValueError):
+    from auth import (
+        AuthContext,
+        UserRegisterRequest,
+        UserLoginRequest,
+        UserSafeResponse,
+        normalize_email,
+        hash_password,
+        verify_password,
+        set_account_cookie,
+        set_guest_cookie,
+        clear_account_cookie,
+        authenticate_request,
+        authorize_session,
+        validate_auth_configuration,
+    )
 
 
 app = FastAPI()
+
+# Phase 16: Configurable CORS supporting credentials without wildcard origin
+frontend_origin_env = os.environ.get("FRONTEND_ORIGIN")
+if frontend_origin_env:
+    allowed_origins = [orig.strip() for orig in frontend_origin_env.split(",") if orig.strip()]
+else:
+    allowed_origins = [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 create_tables()
+
+
+@app.on_event("startup")
+def on_startup():
+    validate_auth_configuration()
+
+
+def get_auth_context(request: Request) -> AuthContext:
+    validate_auth_configuration()
+    connection = get_db()
+    try:
+        return authenticate_request(request, connection)
+    finally:
+        connection.close()
 
 @app.get("/")
 def home():
@@ -121,6 +185,161 @@ def health_check():
 @app.get("/hello/{name}")
 def say_hello(name: str):
     return {"message": f"Hello, {name}!"}
+
+
+# ===========================================================================
+# Phase 16: Authentication & Account Endpoints
+# ===========================================================================
+
+@app.post("/auth/register", status_code=201)
+def register_user(req: UserRegisterRequest, response: Response):
+    email = normalize_email(req.email)
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="A valid email is required.")
+    if not req.password or len(req.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long.")
+
+    connection = get_db()
+    existing = connection.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+    if existing:
+        connection.close()
+        raise HTTPException(status_code=409, detail="An account with this email already exists.")
+
+    pw_hash = hash_password(req.password)
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        cursor = connection.execute(
+            "INSERT INTO users (email, password_hash, created_at, last_login_at) VALUES (?, ?, ?, ?)",
+            (email, pw_hash, now_iso, now_iso)
+        )
+        connection.commit()
+        user_id = cursor.lastrowid
+    except sqlite3.IntegrityError:
+        connection.close()
+        raise HTTPException(status_code=409, detail="An account with this email already exists.")
+    except Exception as e:
+        connection.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    connection.close()
+    set_account_cookie(response, user_id)
+    return {
+        "message": "Registration successful",
+        "user": {
+            "id": user_id,
+            "email": email,
+            "created_at": now_iso,
+            "last_login_at": now_iso
+        }
+    }
+
+
+@app.post("/auth/login")
+def login_user(req: UserLoginRequest, response: Response):
+    email = normalize_email(req.email)
+    if not email or not req.password:
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    connection = get_db()
+    user = connection.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    if not user or not verify_password(req.password, user["password_hash"]):
+        connection.close()
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    connection.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (now_iso, user["id"]))
+    connection.commit()
+    user_id = user["id"]
+    user_email = user["email"]
+    user_created = user["created_at"]
+    connection.close()
+
+    set_account_cookie(response, user_id)
+    return {
+        "message": "Login successful",
+        "user": {
+            "id": user_id,
+            "email": user_email,
+            "created_at": user_created,
+            "last_login_at": now_iso
+        }
+    }
+
+
+@app.post("/auth/logout")
+def logout_user(response: Response):
+    clear_account_cookie(response)
+    return {"message": "Logged out successfully"}
+
+
+@app.get("/auth/me")
+def get_current_user_me(auth_context: AuthContext = Depends(get_auth_context)):
+    if auth_context.is_authenticated:
+        connection = get_db()
+        user = connection.execute(
+            "SELECT id, email, created_at, last_login_at FROM users WHERE id = ?",
+            (auth_context.user_id,)
+        ).fetchone()
+        connection.close()
+        if user:
+            return {
+                "authenticated": True,
+                "guest": False,
+                "user": {
+                    "id": user["id"],
+                    "email": user["email"],
+                    "created_at": user["created_at"],
+                    "last_login_at": user["last_login_at"]
+                }
+            }
+    return {
+        "authenticated": False,
+        "guest": True
+    }
+
+
+@app.get("/account/interviews")
+def get_account_interviews(auth_context: AuthContext = Depends(get_auth_context)):
+    if not auth_context.is_authenticated:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+
+    connection = get_db()
+    rows = connection.execute(
+        """
+        SELECT id, status, category, selected_categories, difficulty,
+               target_role, experience_level, interviewer_style,
+               current_turn, max_turns, created_at, completed_at
+        FROM interview_sessions
+        WHERE user_id = ?
+        ORDER BY id DESC
+        """,
+        (auth_context.user_id,)
+    ).fetchall()
+    connection.close()
+
+    interviews = []
+    for r in rows:
+        selected = None
+        if r["selected_categories"]:
+            try:
+                selected = json.loads(r["selected_categories"])
+            except Exception:
+                selected = None
+        interviews.append({
+            "id": r["id"],
+            "status": r["status"],
+            "category": r["category"],
+            "selected_categories": selected,
+            "difficulty": r["difficulty"],
+            "target_role": r["target_role"],
+            "experience_level": r["experience_level"],
+            "interviewer_style": r["interviewer_style"],
+            "current_turn": r["current_turn"],
+            "max_turns": r["max_turns"],
+            "created_at": r["created_at"],
+            "completed_at": r["completed_at"]
+        })
+    return {"interviews": interviews}
 
 class InterviewAnswer(BaseModel):
     question_id: int
@@ -682,7 +901,11 @@ class SessionAnswerSubmission(BaseModel):
 
 
 @app.post("/sessions", status_code=201)
-async def create_session(session_data: SessionCreate):
+async def create_session(
+    session_data: SessionCreate,
+    response: Response,
+    auth_context: AuthContext = Depends(get_auth_context)
+):
     # STEP 1-4: Configuration pre-validation BEFORE any Gemini call (Correction #4)
     try:
         normalize_session_configuration(
@@ -713,6 +936,15 @@ async def create_session(session_data: SessionCreate):
         candidate_profile = profile_obj.model_dump() if profile_obj else None
         job_context = job_obj.model_dump() if job_obj else None
 
+    # Phase 16: Ownership assignment
+    if auth_context.is_authenticated:
+        user_id = auth_context.user_id
+        guest_id = None
+    else:
+        user_id = None
+        guest_id = auth_context.guest_id or secrets.token_urlsafe(24)
+        set_guest_cookie(response, guest_id)
+
     connection = get_db()
     try:
         result = start_session(
@@ -725,7 +957,9 @@ async def create_session(session_data: SessionCreate):
             experience_level=session_data.experience_level,
             interviewer_style=session_data.interviewer_style,
             candidate_profile=candidate_profile,
-            job_context=job_context
+            job_context=job_context,
+            user_id=user_id,
+            guest_id=guest_id
         )
     except ValueError as e:
         connection.close()
@@ -736,10 +970,13 @@ async def create_session(session_data: SessionCreate):
 
 
 @app.get("/sessions/{session_id}")
-def get_session(session_id: int):
+def get_session(session_id: int, auth_context: AuthContext = Depends(get_auth_context)):
     connection = get_db()
-    data = get_session_details(connection, session_id)
-    connection.close()
+    try:
+        authorize_session(connection, session_id, auth_context)
+        data = get_session_details(connection, session_id)
+    finally:
+        connection.close()
 
     if data is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -748,17 +985,17 @@ def get_session(session_id: int):
 
 
 @app.post("/sessions/{session_id}/answer")
-def submit_session_answer(session_id: int, submission: SessionAnswerSubmission):
+def submit_session_answer(
+    session_id: int,
+    submission: SessionAnswerSubmission,
+    auth_context: AuthContext = Depends(get_auth_context)
+):
     connection = get_db()
-
-    session_row = connection.execute(
-        "SELECT * FROM interview_sessions WHERE id = ?",
-        (session_id,)
-    ).fetchone()
-
-    if session_row is None:
+    try:
+        session_row = authorize_session(connection, session_id, auth_context)
+    except Exception:
         connection.close()
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise
 
     if session_row["status"] != "active":
         connection.close()
@@ -820,10 +1057,13 @@ def submit_session_answer(session_id: int, submission: SessionAnswerSubmission):
 
 
 @app.get("/sessions/{session_id}/summary")
-def get_session_summary_endpoint(session_id: int):
+def get_session_summary_endpoint(session_id: int, auth_context: AuthContext = Depends(get_auth_context)):
     connection = get_db()
-    summary = get_session_summary(connection, session_id)
-    connection.close()
+    try:
+        authorize_session(connection, session_id, auth_context)
+        summary = get_session_summary(connection, session_id)
+    finally:
+        connection.close()
 
     if summary is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -832,12 +1072,17 @@ def get_session_summary_endpoint(session_id: int):
 
 
 @app.get("/sessions/{session_id}/replay")
-def get_session_replay_endpoint(session_id: int):
+def get_session_replay_endpoint(session_id: int, auth_context: AuthContext = Depends(get_auth_context)):
     """
     Phase 15: Interview Replay & Detailed Session Review.
     Reconstructs complete historical interview evidence for a completed session.
     """
     connection = get_db()
+    try:
+        authorize_session(connection, session_id, auth_context)
+    except Exception:
+        connection.close()
+        raise
     try:
         replay = get_session_replay(connection, session_id)
     except SessionNotFoundError as e:
@@ -855,12 +1100,17 @@ def get_session_replay_endpoint(session_id: int):
 
 
 @app.get("/sessions/{session_id}/coaching")
-def get_session_coaching_endpoint(session_id: int):
+def get_session_coaching_endpoint(session_id: int, auth_context: AuthContext = Depends(get_auth_context)):
     """
     Phase 9: Advanced Performance Coaching for completed sessions.
     Returns deterministic signals + Gemini coaching explanation (or deterministic fallback).
     """
     connection = get_db()
+    try:
+        authorize_session(connection, session_id, auth_context)
+    except Exception:
+        connection.close()
+        raise
     try:
         signals = build_coaching_signals(connection, session_id)
     except SessionNotFoundError as e:
@@ -894,22 +1144,19 @@ def get_session_coaching_endpoint(session_id: int):
 async def submit_session_audio_answer(
     session_id: int,
     file: UploadFile = File(...),
-    interviewer_style: str | None = Form(None)
+    interviewer_style: str | None = Form(None),
+    auth_context: AuthContext = Depends(get_auth_context)
 ):
     """
     Submits a spoken audio answer (PCM WAV) to the active turn of an interview session.
     Performs signal processing, speech-to-text, delivery analysis, and technical AI evaluation.
     """
     connection = get_db()
-
-    session_row = connection.execute(
-        "SELECT * FROM interview_sessions WHERE id = ?",
-        (session_id,)
-    ).fetchone()
-
-    if session_row is None:
+    try:
+        session_row = authorize_session(connection, session_id, auth_context)
+    except Exception:
         connection.close()
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise
 
     if session_row["status"] != "active":
         connection.close()
@@ -1150,7 +1397,8 @@ async def submit_session_multimodal_answer(
     session_id: int,
     audio_file: UploadFile = File(...),
     video_file: UploadFile = File(...),
-    interviewer_style: str | None = Form(None)
+    interviewer_style: str | None = Form(None),
+    auth_context: AuthContext = Depends(get_auth_context)
 ):
     """
     Submits a multimodal answer (16kHz PCM WAV audio + WebM/MP4 video) to the active turn.
@@ -1158,15 +1406,11 @@ async def submit_session_multimodal_answer(
     and technical AI evaluation. Guarantees raw media cleanup in a per-request temporary directory.
     """
     connection = get_db()
-
-    session_row = connection.execute(
-        "SELECT * FROM interview_sessions WHERE id = ?",
-        (session_id,)
-    ).fetchone()
-
-    if session_row is None:
+    try:
+        session_row = authorize_session(connection, session_id, auth_context)
+    except Exception:
         connection.close()
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise
 
     if session_row["status"] != "active":
         connection.close()

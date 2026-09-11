@@ -1152,6 +1152,20 @@
   <main>
     <h1>AI Interview Simulator</h1>
 
+    <!-- Phase 16: Authentication Status Bar -->
+    <header class="auth-bar" id="auth-bar" style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid var(--border); border-radius: 10px; padding: 10px 18px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); flex-wrap: wrap; gap: 10px;">
+      <div id="auth-status-container" style="display: flex; align-items: center; gap: 8px;">
+        <span id="auth-badge" class="badge" style="background: #f1f5f9; color: #475569;">👤 Guest Mode</span>
+        <span id="auth-info-text" style="font-size: 0.88rem; color: var(--muted);">Interviews are accessible during your session. Login to save permanent history.</span>
+      </div>
+      <div id="auth-actions" style="display: flex; gap: 8px; align-items: center;">
+        <button type="button" class="btn-page" id="btn-open-login" style="padding: 6px 14px; font-weight: 600; cursor: pointer;">Login</button>
+        <button type="button" class="btn-page" id="btn-open-register" style="padding: 6px 14px; font-weight: 600; cursor: pointer; background: var(--blue); color: white; border-color: var(--blue);">Register</button>
+        <button type="button" class="btn-page hidden" id="btn-open-history" style="padding: 6px 14px; font-weight: 600; cursor: pointer;">My Interviews</button>
+        <button type="button" class="btn-page hidden" id="btn-logout" style="padding: 6px 14px; font-weight: 600; cursor: pointer; color: var(--error); border-color: #fecdd3;">Logout</button>
+      </div>
+    </header>
+
     <section class="stats" aria-label="Interview statistics">
       <div class="stat-card">
         <p>Total bank questions</p>
@@ -1908,6 +1922,47 @@
           </div>
         </div>
       </div>
+
+      <!-- Phase 16: Authentication Modal (Login / Register) -->
+      <div id="auth-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+        <div class="modal-dialog" style="max-width: 440px;">
+          <div class="modal-header">
+            <h2 id="auth-modal-title">Sign In</h2>
+            <button type="button" class="modal-close-btn" id="auth-modal-close" aria-label="Close modal">&times;</button>
+          </div>
+          <div class="modal-body" style="padding: 20px;">
+            <form id="auth-form" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 14px;">
+              <div class="field">
+                <label for="auth-email">Email Address</label>
+                <input type="email" id="auth-email" placeholder="you@example.com" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 7px; font: inherit;" />
+              </div>
+              <div class="field">
+                <label for="auth-password">Password</label>
+                <input type="password" id="auth-password" placeholder="Minimum 8 characters" minlength="8" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 7px; font: inherit;" />
+              </div>
+              <div id="auth-error-msg" style="color: var(--error); font-size: 0.88rem; display: none;"></div>
+              <button type="submit" id="auth-submit-btn" class="btn-primary" style="padding: 10px; font-weight: 600; cursor: pointer; margin-top: 4px;">Sign In</button>
+              <div style="text-align: center; font-size: 0.88rem; margin-top: 6px;">
+                <span id="auth-switch-prompt">Don't have an account?</span>
+                <a href="#" id="auth-switch-link" style="color: var(--blue); font-weight: 600; text-decoration: none; margin-left: 4px;">Register</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 16: Account Interview History Modal -->
+      <div id="account-history-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+        <div class="modal-dialog" style="max-width: 860px;">
+          <div class="modal-header">
+            <h2>My Account Interview History</h2>
+            <button type="button" class="modal-close-btn" id="account-history-modal-close" aria-label="Close modal">&times;</button>
+          </div>
+          <div class="modal-body" id="account-history-modal-body" style="padding: 20px;">
+            <p style="color: var(--muted); text-align: center;">Loading account interviews...</p>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -2166,6 +2221,7 @@
     }
 
     async function fetchApi(path, options = {}) {
+      options.credentials = options.credentials || "include";
       const response = await fetch(`${API_URL}${path}`, options);
       let data = {};
       try {
@@ -2787,6 +2843,7 @@
 
         const response = await fetch(`${API_URL}/sessions/${activeSessionId}/answer-multimodal`, {
           method: "POST",
+          credentials: "include",
           body: formData
         });
 
@@ -2899,6 +2956,7 @@
 
         const response = await fetch(`${API_URL}/sessions/${activeSessionId}/answer-audio`, {
           method: "POST",
+          credentials: "include",
           body: formData
         });
 
@@ -4465,6 +4523,228 @@
       statusMessage.textContent = message;
       statusMessage.classList.toggle("error", isError);
     }
+
+    // =======================================================================
+    // Phase 16: Authentication & Account History Frontend
+    // =======================================================================
+    let currentUser = null;
+    let authMode = "login";
+
+    const authBadge = document.getElementById("auth-badge");
+    const authInfoText = document.getElementById("auth-info-text");
+    const btnOpenLogin = document.getElementById("btn-open-login");
+    const btnOpenRegister = document.getElementById("btn-open-register");
+    const btnOpenHistory = document.getElementById("btn-open-history");
+    const btnLogout = document.getElementById("btn-logout");
+
+    const authModal = document.getElementById("auth-modal");
+    const authModalClose = document.getElementById("auth-modal-close");
+    const authModalTitle = document.getElementById("auth-modal-title");
+    const authForm = document.getElementById("auth-form");
+    const authEmail = document.getElementById("auth-email");
+    const authPassword = document.getElementById("auth-password");
+    const authErrorMsg = document.getElementById("auth-error-msg");
+    const authSubmitBtn = document.getElementById("auth-submit-btn");
+    const authSwitchPrompt = document.getElementById("auth-switch-prompt");
+    const authSwitchLink = document.getElementById("auth-switch-link");
+
+    const accountHistoryModal = document.getElementById("account-history-modal");
+    const accountHistoryModalClose = document.getElementById("account-history-modal-close");
+    const accountHistoryModalBody = document.getElementById("account-history-modal-body");
+
+    function renderGuestState() {
+      authBadge.textContent = "👤 Guest Mode";
+      authBadge.style.background = "#f1f5f9";
+      authBadge.style.color = "#475569";
+      authInfoText.textContent = "Interviews are accessible during your session. Login to save permanent history.";
+      btnOpenLogin.classList.remove("hidden");
+      btnOpenRegister.classList.remove("hidden");
+      btnOpenHistory.classList.add("hidden");
+      btnLogout.classList.add("hidden");
+    }
+
+    function renderAuthenticatedState(user) {
+      authBadge.textContent = `👤 ${user.email}`;
+      authBadge.style.background = "#eff6ff";
+      authBadge.style.color = "#1e40af";
+      authInfoText.textContent = `Logged in. Account ID #${user.id}.`;
+      btnOpenLogin.classList.add("hidden");
+      btnOpenRegister.classList.add("hidden");
+      btnOpenHistory.classList.remove("hidden");
+      btnLogout.classList.remove("hidden");
+    }
+
+    async function checkAuthState() {
+      try {
+        const data = await fetchApi("/auth/me");
+        if (data.authenticated && data.user) {
+          currentUser = data.user;
+          renderAuthenticatedState(data.user);
+        } else {
+          currentUser = null;
+          renderGuestState();
+        }
+      } catch {
+        currentUser = null;
+        renderGuestState();
+      }
+    }
+
+    function openAuthModal(mode) {
+      authMode = mode;
+      authErrorMsg.style.display = "none";
+      authErrorMsg.textContent = "";
+      authEmail.value = "";
+      authPassword.value = "";
+
+      if (authMode === "login") {
+        authModalTitle.textContent = "Sign In";
+        authSubmitBtn.textContent = "Sign In";
+        authSwitchPrompt.textContent = "Don't have an account?";
+        authSwitchLink.textContent = "Register";
+      } else {
+        authModalTitle.textContent = "Create Account";
+        authSubmitBtn.textContent = "Register";
+        authSwitchPrompt.textContent = "Already have an account?";
+        authSwitchLink.textContent = "Sign In";
+      }
+      authModal.classList.remove("hidden");
+    }
+
+    function closeAuthModal() {
+      authModal.classList.add("hidden");
+    }
+
+    if (authSwitchLink) {
+      authSwitchLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        openAuthModal(authMode === "login" ? "register" : "login");
+      });
+    }
+
+    if (authModalClose) authModalClose.addEventListener("click", closeAuthModal);
+    if (btnOpenLogin) btnOpenLogin.addEventListener("click", () => openAuthModal("login"));
+    if (btnOpenRegister) btnOpenRegister.addEventListener("click", () => openAuthModal("register"));
+
+    if (authForm) {
+      authForm.addEventListener("submit", async () => {
+        authErrorMsg.style.display = "none";
+        const email = authEmail.value.trim();
+        const password = authPassword.value;
+
+        if (!email || !password) {
+          authErrorMsg.textContent = "Please fill in all fields.";
+          authErrorMsg.style.display = "block";
+          return;
+        }
+        if (password.length < 8) {
+          authErrorMsg.textContent = "Password must be at least 8 characters long.";
+          authErrorMsg.style.display = "block";
+          return;
+        }
+
+        authSubmitBtn.disabled = true;
+        authSubmitBtn.textContent = authMode === "login" ? "Signing In..." : "Registering...";
+
+        try {
+          const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
+          const resp = await fetchApi(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+          });
+          closeAuthModal();
+          setStatus(resp.message || "Success!");
+          await checkAuthState();
+        } catch (err) {
+          authErrorMsg.textContent = err.message;
+          authErrorMsg.style.display = "block";
+        } finally {
+          authSubmitBtn.disabled = false;
+          authSubmitBtn.textContent = authMode === "login" ? "Sign In" : "Register";
+        }
+      });
+    }
+
+    if (btnLogout) {
+      btnLogout.addEventListener("click", async () => {
+        try {
+          await fetchApi("/auth/logout", { method: "POST" });
+          setStatus("Logged out successfully.");
+          await checkAuthState();
+        } catch (err) {
+          setStatus("Logout error: " + err.message, true);
+        }
+      });
+    }
+
+    async function openAccountHistoryModal() {
+      accountHistoryModal.classList.remove("hidden");
+      accountHistoryModalBody.innerHTML = '<p style="color: var(--muted); text-align: center; padding: 24px;">Loading account interviews...</p>';
+
+      try {
+        const data = await fetchApi("/account/interviews");
+        const list = data.interviews || [];
+        if (list.length === 0) {
+          accountHistoryModalBody.innerHTML = '<p style="color: var(--muted); text-align: center; padding: 24px;">No interviews recorded for this account yet. Start a new interview session above!</p>';
+          return;
+        }
+
+        let rowsHtml = "";
+        list.forEach((s) => {
+          const dt = s.created_at ? new Date(s.created_at).toLocaleString() : "N/A";
+          const cats = s.selected_categories && s.selected_categories.length ? s.selected_categories.join(", ") : (s.category || "All");
+          const statusBadge = s.status === "completed"
+            ? '<span class="badge" style="background:#dcfce7;color:#166534;">Completed</span>'
+            : '<span class="badge" style="background:#fef3c7;color:#92400e;">Active</span>';
+
+          rowsHtml += `
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 10px; font-weight: bold;">#${s.id}</td>
+              <td style="padding: 10px;">${dt}</td>
+              <td style="padding: 10px;">${escapeHtml(cats)}</td>
+              <td style="padding: 10px; text-transform: capitalize;">${escapeHtml(s.difficulty || "medium")}</td>
+              <td style="padding: 10px;">${s.current_turn || 0} / ${s.max_turns || 5}</td>
+              <td style="padding: 10px;">${statusBadge}</td>
+              <td style="padding: 10px;">
+                ${s.status === "completed" ? `<button type="button" class="btn-review" onclick="accountHistoryModal.classList.add('hidden'); openSessionReview(${s.id});">Review</button>` : '<span style="color: var(--muted); font-size: 0.85rem;">In Progress</span>'}
+              </td>
+            </tr>
+          `;
+        });
+
+        accountHistoryModalBody.innerHTML = `
+          <table class="turn-history-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #f1f5f9;">
+                <th style="padding: 8px; text-align: left;">ID</th>
+                <th style="padding: 8px; text-align: left;">Date</th>
+                <th style="padding: 8px; text-align: left;">Domain / Role</th>
+                <th style="padding: 8px; text-align: left;">Difficulty</th>
+                <th style="padding: 8px; text-align: left;">Turns</th>
+                <th style="padding: 8px; text-align: left;">Status</th>
+                <th style="padding: 8px; text-align: left;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        `;
+      } catch (err) {
+        accountHistoryModalBody.innerHTML = `<p style="color: var(--error);">Error loading interviews: ${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    function closeAccountHistoryModal() {
+      accountHistoryModal.classList.add("hidden");
+    }
+
+    if (btnOpenHistory) btnOpenHistory.addEventListener("click", openAccountHistoryModal);
+    if (accountHistoryModalClose) accountHistoryModalClose.addEventListener("click", closeAccountHistoryModal);
+
+    // Initial check of auth state
+    checkAuthState();
   </script>
 </body>
 </html>
