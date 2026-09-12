@@ -548,6 +548,51 @@ class TestPhase17ProductionHardening(unittest.TestCase):
         self.assertIn("Environment=UVICORN_WORKERS=1", content)
         self.assertNotIn("--workers 2", content)
 
+    def test_24_deployment_readme_auth_secret_and_sqlite_verification(self):
+        """
+        Verifies deploy/README.md uses safe shell-expanded AUTH_SECRET_KEY generation,
+        PRAGMA-based SQLite smoke-test commands, explicit GEMINI_API_KEY placeholder,
+        disaster recovery limitations, Python compatibility pre-flight, fail2ban, and public repo access.
+        """
+        repo_root = Path(__file__).resolve().parent.parent
+        readme_file = repo_root / "deploy" / "README.md"
+        self.assertTrue(readme_file.is_file())
+        content = readme_file.read_text(encoding="utf-8")
+
+        # 1. Verify safe shell evaluation pattern
+        self.assertIn('AUTH_SECRET_KEY="$(openssl rand -hex 32)"', content)
+        self.assertIn("AUTH_SECRET_KEY=${AUTH_SECRET_KEY}", content)
+
+        # 2. Confirm no broken quoted heredoc preventing command substitution
+        self.assertNotIn("AUTH_SECRET_KEY=$(openssl rand -hex 32)\n", content)
+
+        # 3. Confirm SQLite PRAGMA checks are documented
+        self.assertIn('sqlite3 /data/interview.db "PRAGMA journal_mode;"', content)
+        self.assertIn('sqlite3 /data/interview.db "PRAGMA integrity_check;"', content)
+
+        # 4. Confirm auxiliary -wal and -shm files are not required to exist
+        self.assertIn("Do NOT check for the presence of `-wal` or `-shm` auxiliary files", content)
+
+        # 5. Confirm explicit GEMINI_API_KEY configuration placeholder
+        self.assertIn("GEMINI_API_KEY=", content)
+        self.assertIn("deterministic fallbacks", content)
+
+        # 6. Confirm disaster-recovery limitations and laptop non-storage invariant
+        self.assertIn("Current Disaster-Recovery Limitations", content)
+        self.assertIn("Same-Disk Limitation", content)
+        self.assertIn("Production interview data must **not** be synced or backed up to local developer laptops", content)
+
+        # 7. Confirm Python 3.10 - 3.12 compatibility pre-flight check
+        self.assertIn("Python Runtime Compatibility & Pre-Flight Check", content)
+        self.assertIn("Python 3.10 - 3.12", content)
+
+        # 8. Confirm fail2ban and repository access documentation
+        self.assertIn("fail2ban", content)
+        self.assertIn("fail2ban-client status sshd", content)
+        self.assertNotIn("5 failed attempts within 10 minutes", content)
+        self.assertIn("Public Repository Assumption", content)
+        self.assertIn("https://github.com/AkshitBedi/Ai-Interview-Simulator.git", content)
+
 
 if __name__ == "__main__":
     unittest.main()
