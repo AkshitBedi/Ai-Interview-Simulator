@@ -17,6 +17,7 @@ Why this is required:
 
 import threading
 from contextlib import contextmanager
+from typing import Optional
 
 # Global process-local semaphore limiting expensive ML inference concurrency to 1
 INFERENCE_GATE = threading.Semaphore(1)

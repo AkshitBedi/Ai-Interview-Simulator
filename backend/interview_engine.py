@@ -2,7 +2,7 @@ import os
 import re
 import json
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Any
 
 # Load .env if present
 try:

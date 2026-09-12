@@ -593,6 +593,49 @@ class TestPhase17ProductionHardening(unittest.TestCase):
         self.assertIn("Public Repository Assumption", content)
         self.assertIn("https://github.com/AkshitBedi/Ai-Interview-Simulator.git", content)
 
+    def test_25_eager_annotation_evaluation_and_typing_imports(self):
+        """
+        Proves that backend.interview_engine and backend.inference_gate have all
+        required typing imports (Any, Optional) and do not fail under Python 3.12-style
+        eager annotation evaluation.
+
+        In Python <= 3.12, function annotations are evaluated eagerly at definition time.
+        In Python >= 3.14 (PEP 649), annotation evaluation is deferred until explicitly queried.
+        This test uses typing.get_type_hints() to force immediate eager evaluation of all annotations
+        on critical functions in both modules, proving they resolve without NameError across all Python versions.
+        """
+        import typing
+        import inspect
+
+        # 1. Test backend.inference_gate functions
+        import backend.inference_gate as ig
+        self.assertTrue(hasattr(ig, "Optional"), "backend.inference_gate must import Optional from typing")
+        ig_hints = typing.get_type_hints(ig.inference_guard)
+        self.assertIn("timeout", ig_hints)
+
+        # 2. Test backend.interview_engine functions
+        import backend.interview_engine as ie
+        self.assertTrue(hasattr(ie, "Any"), "backend.interview_engine must import Any from typing")
+        ie_hints = typing.get_type_hints(ie.is_claim_eligible)
+        self.assertIn("claim", ie_hints)
+
+        # 3. Comprehensive eager evaluation of all functions in backend.inference_gate
+        for name, func in inspect.getmembers(ig, inspect.isfunction):
+            if func.__module__ == ig.__name__:
+                try:
+                    typing.get_type_hints(func)
+                except Exception as exc:
+                    self.fail(f"Eager annotation evaluation failed for {ig.__name__}.{name}: {exc}")
+
+        # 4. Comprehensive eager evaluation of key candidate functions in backend.interview_engine
+        for name in ("is_claim_eligible", "start_session", "get_session_details", "record_answer_and_advance"):
+            func = getattr(ie, name, None)
+            if func:
+                try:
+                    typing.get_type_hints(func)
+                except Exception as exc:
+                    self.fail(f"Eager annotation evaluation failed for {ie.__name__}.{name}: {exc}")
+
 
 if __name__ == "__main__":
     unittest.main()
