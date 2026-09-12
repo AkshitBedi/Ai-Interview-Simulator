@@ -707,7 +707,7 @@ def extract_candidate_profile_sync(raw_resume: str) -> CandidateProfile:
     try:
         from google.genai import types
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=f"{RESUME_EXTRACTION_PROMPT}\n\nRESUME CONTENT:\n\"\"\"{sanitized}\"\"\"",
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -742,7 +742,7 @@ def extract_job_context_sync(raw_jd: str) -> JobContext:
     try:
         from google.genai import types
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=f"{JOB_EXTRACTION_PROMPT}\n\nJOB DESCRIPTION CONTENT:\n\"\"\"{sanitized}\"\"\"",
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",

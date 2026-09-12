@@ -22,7 +22,7 @@ class EvaluationResult(BaseModel):
     technical_accuracy: str = Field(description="Evaluation of technical correctness, concepts, and depth")
     strengths: list[str] = Field(default_factory=list, description="Specific concepts or points explained well")
     missing_points: list[str] = Field(default_factory=list, description="Key concepts, edge cases, or trade-offs that were missed")
-    evaluator: str = Field(default="gemini-2.5-flash", description="Identifier of the evaluator used")
+    evaluator: str = Field(default="gemini-3.6-flash", description="Identifier of the evaluator used")
 
 
 def _normalize_token(w: str) -> str:
@@ -387,7 +387,7 @@ CRITICAL EVALUATION GUIDELINES:
 """
 
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -398,7 +398,7 @@ CRITICAL EVALUATION GUIDELINES:
 
         if response.text:
             data = json.loads(response.text)
-            data["evaluator"] = "gemini-2.5-flash"
+            data["evaluator"] = "gemini-3.6-flash"
             return EvaluationResult(**data)
         else:
             return _heuristic_evaluate(question, category, difficulty, answer)

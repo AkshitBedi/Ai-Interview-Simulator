@@ -176,7 +176,7 @@ class TestGeminiPromptAndOutputContract(unittest.TestCase):
                 "Explain normalization in databases."
             )
             self.assertEqual(res.score, 1)
-            self.assertEqual(res.evaluator, "gemini-2.5-flash")
+            self.assertEqual(res.evaluator, "gemini-3.6-flash")
             self.assertIn("repeated", res.feedback.lower())
 
 

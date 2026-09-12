@@ -986,7 +986,7 @@ def generate_insights_executive_summary(payload: dict[str, Any]) -> str:
             "and do NOT invent any claims or facts outside this JSON:\n" + json.dumps(facts)
         )
         resp = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=prompt
         )
         if resp and resp.text and len(resp.text.strip()) > 20:

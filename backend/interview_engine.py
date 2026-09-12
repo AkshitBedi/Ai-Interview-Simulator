@@ -165,7 +165,7 @@ Rules:
 Return ONLY the follow-up question text with no preface or quotes.
 """
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.6-flash",
                 contents=prompt
             )
             text = response.text.strip() if response.text else ""
@@ -653,7 +653,7 @@ Do NOT introduce any new technologies or tools that are not listed in the Techno
 Return ONLY the probe question text ending with '?' with no preface, quotes, or markdown.
 """
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=prompt
         )
         text = response.text.strip() if response.text else ""

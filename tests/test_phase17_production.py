@@ -636,6 +636,74 @@ class TestPhase17ProductionHardening(unittest.TestCase):
                 except Exception as exc:
                     self.fail(f"Eager annotation evaluation failed for {ie.__name__}.{name}: {exc}")
 
+    def test_26_gemini_model_reference_and_deprecation_defense(self):
+        """
+        Proves that all production Gemini-backed modules use 'gemini-3.6-flash'
+        and that the obsolete 'gemini-2.5-flash' model string has been completely
+        eliminated from all production code.
+        """
+        backend_dir = Path(__file__).resolve().parent.parent / "backend"
+        production_modules = [
+            "evaluator.py",
+            "interviewer.py",
+            "document_processor.py",
+            "coaching.py",
+            "interview_engine.py",
+            "insights_engine.py",
+        ]
+
+        for mod_name in production_modules:
+            mod_path = backend_dir / mod_name
+            self.assertTrue(mod_path.is_file(), f"Expected production module {mod_path} exists")
+            content = mod_path.read_text(encoding="utf-8")
+
+            self.assertNotIn(
+                "gemini-2.5-flash",
+                content,
+                f"Obsolete model 'gemini-2.5-flash' found in {mod_name}",
+            )
+            self.assertIn(
+                "gemini-3.6-flash",
+                content,
+                f"Supported model 'gemini-3.6-flash' not found in {mod_name}",
+            )
+
+        # Verify EvaluationResult default evaluator field
+        from backend.evaluator import EvaluationResult, evaluate_interview_answer
+
+        res_default = EvaluationResult(
+            score=5,
+            feedback="Sample feedback",
+            technical_accuracy="Sample accuracy",
+        )
+        self.assertEqual(res_default.evaluator, "gemini-3.6-flash")
+
+        # Verify mocked evaluate_interview_answer returns gemini-3.6-flash
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = (
+            '{"score": 8, "feedback": "Accurate explanation.", '
+            '"technical_accuracy": "Good technical depth.", "strengths": ["Clear concepts."], "missing_points": []}'
+        )
+        mock_client.models.generate_content.return_value = mock_response
+
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "fake_test_key"}):
+            with patch("google.genai.Client", return_value=mock_client):
+                eval_res = evaluate_interview_answer(
+                    question="What is the difference between a Python list and a tuple?",
+                    category="Python",
+                    difficulty="medium",
+                    answer="A list is mutable, while a tuple is immutable.",
+                )
+                self.assertEqual(eval_res.score, 8)
+                self.assertEqual(eval_res.evaluator, "gemini-3.6-flash")
+                self.assertIn("accurate explanation", eval_res.feedback.lower())
+
+                # Verify the model passed to generate_content was strictly gemini-3.6-flash
+                mock_client.models.generate_content.assert_called_once()
+                call_kwargs = mock_client.models.generate_content.call_args.kwargs
+                self.assertEqual(call_kwargs.get("model"), "gemini-3.6-flash")
+
 
 if __name__ == "__main__":
     unittest.main()
