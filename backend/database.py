@@ -1,13 +1,41 @@
+import os
 import sqlite3
 from pathlib import Path
 
-DATABASE_NAME = Path(__file__).resolve().parent / "interview.db"
+
+DATABASE_DEFAULT_NAME = Path(__file__).resolve().parent / "interview.db"
+DATABASE_NAME = DATABASE_DEFAULT_NAME
+
+
+def get_database_path() -> Path | str:
+    env_path = os.environ.get("DATABASE_PATH")
+    if env_path and env_path.strip():
+        clean_path = env_path.strip()
+        if clean_path == ":memory:":
+            return clean_path
+        target = Path(clean_path).resolve()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        return target
+
+    # Preserve backward compatibility with test suites patching backend.database.DATABASE_NAME
+    if str(DATABASE_NAME) != str(DATABASE_DEFAULT_NAME):
+        if str(DATABASE_NAME) == ":memory:":
+            return ":memory:"
+        target = Path(DATABASE_NAME).resolve()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        return target
+
+    DATABASE_DEFAULT_NAME.parent.mkdir(parents=True, exist_ok=True)
+    return DATABASE_DEFAULT_NAME
 
 
 def get_db():
-    connection = sqlite3.connect(DATABASE_NAME)
+    connection = sqlite3.connect(get_database_path())
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("PRAGMA journal_mode = WAL")
+    connection.execute("PRAGMA busy_timeout = 5000")
+    connection.execute("PRAGMA synchronous = NORMAL")
     return connection
 
 

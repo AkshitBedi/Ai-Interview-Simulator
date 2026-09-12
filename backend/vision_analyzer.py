@@ -19,6 +19,11 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+try:
+    from .inference_gate import inference_guard, InferenceCapacityError
+except (ImportError, ValueError):
+    from inference_gate import inference_guard, InferenceCapacityError
+
 # Constants
 IDEAL_CENTER_X = 0.5
 IDEAL_CENTER_Y = 0.4
@@ -737,44 +742,45 @@ def process_video(
     2. Runs geometric feature extraction (MediaPipe FaceLandmarker or OpenCV fallback).
     3. Calculates deterministic nonverbal score and objective descriptive feedback.
     """
-    frames_rgb, fps, duration = extract_video_frames(video_bytes_or_path, target_fps=target_fps)
+    with inference_guard():
+        frames_rgb, fps, duration = extract_video_frames(video_bytes_or_path, target_fps=target_fps)
 
-    metrics = analyze_video_frames(
-        frames_rgb=frames_rgb,
-        fps=fps,
-        duration_seconds=duration,
-        force_backend=force_backend
-    )
+        metrics = analyze_video_frames(
+            frames_rgb=frames_rgb,
+            fps=fps,
+            duration_seconds=duration,
+            force_backend=force_backend
+        )
 
-    score, feedback = calculate_nonverbal_score(
-        face_detected_ratio=metrics.face_detected_ratio,
-        centering_offset=metrics.centering_offset,
-        motion_energy=metrics.motion_energy,
-        gaze_deviation_ratio=metrics.gaze_deviation_ratio,
-        yaw_variance=metrics.yaw_variance,
-        pitch_variance=metrics.pitch_variance,
-        roll_variance=metrics.roll_variance,
-        head_motion_frequency_hz=metrics.head_motion_frequency_hz,
-        camera_quality_flags=metrics.camera_quality_flags,
-        vision_backend=metrics.vision_backend
-    )
+        score, feedback = calculate_nonverbal_score(
+            face_detected_ratio=metrics.face_detected_ratio,
+            centering_offset=metrics.centering_offset,
+            motion_energy=metrics.motion_energy,
+            gaze_deviation_ratio=metrics.gaze_deviation_ratio,
+            yaw_variance=metrics.yaw_variance,
+            pitch_variance=metrics.pitch_variance,
+            roll_variance=metrics.roll_variance,
+            head_motion_frequency_hz=metrics.head_motion_frequency_hz,
+            camera_quality_flags=metrics.camera_quality_flags,
+            vision_backend=metrics.vision_backend
+        )
 
-    return NonverbalAnalysisResult(
-        video_duration_seconds=metrics.video_duration_seconds,
-        frames_analyzed=metrics.frames_analyzed,
-        face_detected_ratio=metrics.face_detected_ratio,
-        centering_offset=metrics.centering_offset,
-        gaze_deviation_ratio=metrics.gaze_deviation_ratio,
-        avg_yaw_degrees=metrics.avg_yaw_degrees,
-        avg_pitch_degrees=metrics.avg_pitch_degrees,
-        avg_roll_degrees=metrics.avg_roll_degrees,
-        yaw_variance=metrics.yaw_variance,
-        pitch_variance=metrics.pitch_variance,
-        roll_variance=metrics.roll_variance,
-        head_motion_frequency_hz=metrics.head_motion_frequency_hz,
-        motion_energy=metrics.motion_energy,
-        camera_quality_flags=metrics.camera_quality_flags,
-        nonverbal_telemetry_score=score,
-        nonverbal_feedback=feedback,
-        vision_backend=metrics.vision_backend
-    )
+        return NonverbalAnalysisResult(
+            video_duration_seconds=metrics.video_duration_seconds,
+            frames_analyzed=metrics.frames_analyzed,
+            face_detected_ratio=metrics.face_detected_ratio,
+            centering_offset=metrics.centering_offset,
+            gaze_deviation_ratio=metrics.gaze_deviation_ratio,
+            avg_yaw_degrees=metrics.avg_yaw_degrees,
+            avg_pitch_degrees=metrics.avg_pitch_degrees,
+            avg_roll_degrees=metrics.avg_roll_degrees,
+            yaw_variance=metrics.yaw_variance,
+            pitch_variance=metrics.pitch_variance,
+            roll_variance=metrics.roll_variance,
+            head_motion_frequency_hz=metrics.head_motion_frequency_hz,
+            motion_energy=metrics.motion_energy,
+            camera_quality_flags=metrics.camera_quality_flags,
+            nonverbal_telemetry_score=score,
+            nonverbal_feedback=feedback,
+            vision_backend=metrics.vision_backend
+        )

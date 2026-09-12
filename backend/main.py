@@ -99,6 +99,7 @@ import secrets
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form, Request, Response, Depends
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 try:
@@ -134,6 +135,19 @@ except (ImportError, ValueError):
         authorize_session,
         validate_auth_configuration,
         is_production,
+    )
+
+try:
+    from .inference_gate import (
+        InferenceCapacityError,
+        inference_guard,
+        validate_worker_configuration,
+    )
+except (ImportError, ValueError):
+    from inference_gate import (
+        InferenceCapacityError,
+        inference_guard,
+        validate_worker_configuration,
     )
 
 
@@ -185,6 +199,15 @@ create_tables()
 @app.on_event("startup")
 def on_startup():
     validate_auth_configuration()
+    validate_worker_configuration()
+
+
+@app.exception_handler(InferenceCapacityError)
+async def inference_capacity_exception_handler(request: Request, exc: InferenceCapacityError):
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Inference capacity is temporarily busy. Please try again shortly."}
+    )
 
 
 def get_auth_context(request: Request) -> AuthContext:
@@ -195,13 +218,24 @@ def get_auth_context(request: Request) -> AuthContext:
     finally:
         connection.close()
 
-@app.get("/")
+INDEX_HTML_PATH = REPO_ROOT / "web" / "index.html"
+
+@app.get("/", response_class=FileResponse)
 def home():
-    return {"message": "Hello, FastAPI!"}
+    if not INDEX_HTML_PATH.is_file():
+        raise HTTPException(status_code=404, detail="Frontend file not found.")
+    return FileResponse(INDEX_HTML_PATH, media_type="text/html")
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy"}
+    try:
+        connection = get_db()
+        cursor = connection.execute("SELECT 1")
+        cursor.fetchone()
+        connection.close()
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Database health check failed: {e}")
+    return {"status": "healthy", "database": "connected"}
 
 @app.get("/hello/{name}")
 def say_hello(name: str):
@@ -1238,6 +1272,11 @@ async def submit_session_audio_answer(
         # 2. Speech-to-Text transcription via faster-whisper
         try:
             stt_result = transcribe_audio(tmp_path)
+        except InferenceCapacityError:
+            raise HTTPException(
+                status_code=503,
+                detail="Inference capacity is temporarily busy. Please try again shortly."
+            )
         except TranscriptionError as e:
             raise HTTPException(
                 status_code=503,
@@ -1350,6 +1389,11 @@ async def analyze_speech_endpoint(
             try:
                 stt_data = transcribe_audio(tmp_path)
                 transcript = stt_data.get("text", "").strip()
+            except InferenceCapacityError:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Inference capacity is temporarily busy. Please try again shortly."
+                )
             except TranscriptionError as e:
                 raise HTTPException(status_code=503, detail=str(e))
 
@@ -1510,6 +1554,11 @@ async def submit_session_multimodal_answer(
         # 2. Speech-to-Text transcription via faster-whisper
         try:
             stt_result = transcribe_audio(audio_path)
+        except InferenceCapacityError:
+            raise HTTPException(
+                status_code=503,
+                detail="Inference capacity is temporarily busy. Please try again shortly."
+            )
         except TranscriptionError as e:
             raise HTTPException(
                 status_code=503,
@@ -1567,6 +1616,11 @@ async def submit_session_multimodal_answer(
         try:
             nv_result = process_video(video_path)
             nonverbal_metrics = nv_result.to_dict()
+        except InferenceCapacityError:
+            raise HTTPException(
+                status_code=503,
+                detail="Inference capacity is temporarily busy. Please try again shortly."
+            )
         except VisionProcessingError as e:
             raise HTTPException(
                 status_code=422,
@@ -1622,6 +1676,11 @@ async def analyze_vision_endpoint(video_file: UploadFile = File(...)):
     try:
         res = process_video(tmp_path)
         return res.to_dict()
+    except InferenceCapacityError:
+        raise HTTPException(
+            status_code=503,
+            detail="Inference capacity is temporarily busy. Please try again shortly."
+        )
     except VisionProcessingError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:

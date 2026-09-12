@@ -1,0 +1,25 @@
+[Unit]
+Description=AI Interview Simulator FastAPI Service
+After=network.target
+
+[Service]
+Type=simple
+User=azureuser
+Group=azureuser
+WorkingDirectory=/opt/ai-interview-simulator
+Environment=UVICORN_WORKERS=1
+EnvironmentFile=/opt/ai-interview-simulator/.env.production
+ExecStart=/opt/ai-interview-simulator/backend/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000 --workers 1
+Restart=always
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=interview-simulator
+
+# Process sandbox hardening
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

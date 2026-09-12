@@ -10,6 +10,11 @@ from typing import Optional, List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
+try:
+    from .inference_gate import inference_guard, InferenceCapacityError
+except (ImportError, ValueError):
+    from inference_gate import inference_guard, InferenceCapacityError
+
 # Default model configuration
 DEFAULT_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "base.en")
 DEFAULT_DEVICE = os.getenv("WHISPER_DEVICE", "cpu")
@@ -95,36 +100,39 @@ def transcribe_audio(
     model = get_whisper_model(model_size=model_size)
 
     try:
-        segments_gen, info = model.transcribe(
-            audio_path,
-            beam_size=beam_size,
-            vad_filter=vad_filter,
-            word_timestamps=False
-        )
+        with inference_guard():
+            segments_gen, info = model.transcribe(
+                audio_path,
+                beam_size=beam_size,
+                vad_filter=vad_filter,
+                word_timestamps=False
+            )
 
-        segments: List[Dict[str, Any]] = []
-        transcript_parts: List[str] = []
+            segments: List[Dict[str, Any]] = []
+            transcript_parts: List[str] = []
 
-        for seg in segments_gen:
-            clean_text = seg.text.strip()
-            if clean_text:
-                transcript_parts.append(clean_text)
-            segments.append({
-                "start": round(seg.start, 2),
-                "end": round(seg.end, 2),
-                "text": clean_text,
-                "avg_logprob": round(seg.avg_logprob, 3)
-            })
+            for seg in segments_gen:
+                clean_text = seg.text.strip()
+                if clean_text:
+                    transcript_parts.append(clean_text)
+                segments.append({
+                    "start": round(seg.start, 2),
+                    "end": round(seg.end, 2),
+                    "text": clean_text,
+                    "avg_logprob": round(seg.avg_logprob, 3)
+                })
 
-        consolidated_text = " ".join(transcript_parts).strip()
+            consolidated_text = " ".join(transcript_parts).strip()
 
-        return {
-            "text": consolidated_text,
-            "language": info.language,
-            "language_probability": round(info.language_probability, 3),
-            "duration": round(info.duration, 2),
-            "segments": segments
-        }
+            return {
+                "text": consolidated_text,
+                "language": info.language,
+                "language_probability": round(info.language_probability, 3),
+                "duration": round(info.duration, 2),
+                "segments": segments
+            }
+    except InferenceCapacityError:
+        raise
     except Exception as e:
         logger.error(f"Error transcribing audio {audio_path}: {e}", exc_info=True)
         raise TranscriptionError(f"Transcription failed: {str(e)}") from e

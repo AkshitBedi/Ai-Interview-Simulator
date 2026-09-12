@@ -1,0 +1,14 @@
+[Unit]
+Description=AI Interview Simulator Daily SQLite Backup
+After=network.target
+
+[Service]
+Type=oneshot
+User=azureuser
+Group=azureuser
+WorkingDirectory=/opt/ai-interview-simulator
+EnvironmentFile=/opt/ai-interview-simulator/.env.production
+ExecStart=/opt/ai-interview-simulator/backend/.venv/bin/python scripts/backup_db.py backup --dest /var/backups/interview-simulator --retention-days 14
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=interview-backup

@@ -3,3 +3,10 @@
 __pycache__/
 *.pyc
 interview.db
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.*
+*.log
+backups/
