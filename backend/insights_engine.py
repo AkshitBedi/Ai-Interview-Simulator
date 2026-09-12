@@ -28,6 +28,11 @@ except (ImportError, ValueError):
     from category_classifier import compute_category_status
 
 try:
+    from .gemini_config import get_gemini_model
+except (ImportError, ValueError):
+    from gemini_config import get_gemini_model
+
+try:
     from .coaching import classify_answer_quality
 except (ImportError, ValueError):
     try:
@@ -986,7 +991,7 @@ def generate_insights_executive_summary(payload: dict[str, Any]) -> str:
             "and do NOT invent any claims or facts outside this JSON:\n" + json.dumps(facts)
         )
         resp = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model=get_gemini_model(),
             contents=prompt
         )
         if resp and resp.text and len(resp.text.strip()) > 20:

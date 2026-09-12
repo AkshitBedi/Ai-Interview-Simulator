@@ -21,6 +21,11 @@ except ImportError:
     genai = None
 
 try:
+    from .gemini_config import get_gemini_model
+except (ImportError, ValueError):
+    from gemini_config import get_gemini_model
+
+try:
     from . import strategy_engine
 except (ImportError, ValueError):
     import strategy_engine
@@ -165,7 +170,7 @@ Rules:
 Return ONLY the follow-up question text with no preface or quotes.
 """
             response = client.models.generate_content(
-                model="gemini-3.6-flash",
+                model=get_gemini_model(),
                 contents=prompt
             )
             text = response.text.strip() if response.text else ""
@@ -653,7 +658,7 @@ Do NOT introduce any new technologies or tools that are not listed in the Techno
 Return ONLY the probe question text ending with '?' with no preface, quotes, or markdown.
 """
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model=get_gemini_model(),
             contents=prompt
         )
         text = response.text.strip() if response.text else ""

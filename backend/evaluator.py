@@ -15,6 +15,11 @@ try:
 except ImportError:
     pass
 
+try:
+    from .gemini_config import DEFAULT_GEMINI_MODEL, get_gemini_model
+except ImportError:
+    from gemini_config import DEFAULT_GEMINI_MODEL, get_gemini_model
+
 
 class EvaluationResult(BaseModel):
     score: int = Field(ge=1, le=10, description="Overall performance score from 1 to 10")
@@ -22,7 +27,7 @@ class EvaluationResult(BaseModel):
     technical_accuracy: str = Field(description="Evaluation of technical correctness, concepts, and depth")
     strengths: list[str] = Field(default_factory=list, description="Specific concepts or points explained well")
     missing_points: list[str] = Field(default_factory=list, description="Key concepts, edge cases, or trade-offs that were missed")
-    evaluator: str = Field(default="gemini-3.6-flash", description="Identifier of the evaluator used")
+    evaluator: str = Field(default_factory=get_gemini_model, description="Identifier of the evaluator used")
 
 
 def _normalize_token(w: str) -> str:
@@ -386,8 +391,9 @@ CRITICAL EVALUATION GUIDELINES:
 5. Output structured JSON matching the requested schema.
 """
 
+        configured_model = get_gemini_model()
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model=configured_model,
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -398,7 +404,7 @@ CRITICAL EVALUATION GUIDELINES:
 
         if response.text:
             data = json.loads(response.text)
-            data["evaluator"] = "gemini-3.6-flash"
+            data["evaluator"] = configured_model
             return EvaluationResult(**data)
         else:
             return _heuristic_evaluate(question, category, difficulty, answer)

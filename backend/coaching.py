@@ -34,6 +34,11 @@ except (ImportError, ValueError):
         compute_category_status,
     )
 
+try:
+    from .gemini_config import get_gemini_model
+except (ImportError, ValueError):
+    from gemini_config import get_gemini_model
+
 # Speech Metric Thresholds (Phase 4 canonical)
 WPM_RUSHED_THRESHOLD = 185.0
 WPM_SLOW_THRESHOLD = 90.0
@@ -1381,7 +1386,7 @@ Generate the structured performance coaching report following the requested sche
         from google.genai import types
 
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model=get_gemini_model(),
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",

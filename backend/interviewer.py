@@ -21,6 +21,11 @@ except (ImportError, ValueError):
     except (ImportError, ValueError):
         compact_profile_and_job_context = None
 
+try:
+    from .gemini_config import get_gemini_model
+except (ImportError, ValueError):
+    from gemini_config import get_gemini_model
+
 # Constants
 INTERVIEWER_STYLES = ["professional", "conversational", "strict"]
 DEFAULT_STYLE = "professional"
@@ -527,7 +532,7 @@ MANDATORY SECURITY & OPERATIONAL RULES:
 """
 
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model=get_gemini_model(),
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",

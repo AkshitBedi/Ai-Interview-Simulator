@@ -638,9 +638,9 @@ class TestPhase17ProductionHardening(unittest.TestCase):
 
     def test_26_gemini_model_reference_and_deprecation_defense(self):
         """
-        Proves that all production Gemini-backed modules use 'gemini-3.6-flash'
-        and that the obsolete 'gemini-2.5-flash' model string has been completely
-        eliminated from all production code.
+        Proves that all production Gemini-backed modules use centralized get_gemini_model(),
+        that DEFAULT_GEMINI_MODEL is 'gemini-3.6-flash', and that no independent hardcoded
+        model string literals remain in production call sites.
         """
         backend_dir = Path(__file__).resolve().parent.parent / "backend"
         production_modules = [
@@ -652,23 +652,45 @@ class TestPhase17ProductionHardening(unittest.TestCase):
             "insights_engine.py",
         ]
 
+        # 1. Verify backend/gemini_config.py exists and defines DEFAULT_GEMINI_MODEL
+        from backend.gemini_config import DEFAULT_GEMINI_MODEL, get_gemini_model
+        self.assertEqual(DEFAULT_GEMINI_MODEL, "gemini-3.6-flash")
+
+        # 2. Verify obsolete 'gemini-2.5-flash' does not appear anywhere in backend/
+        for py_file in backend_dir.glob("*.py"):
+            content = py_file.read_text(encoding="utf-8")
+            self.assertNotIn(
+                "gemini-2.5-flash",
+                content,
+                f"Obsolete model 'gemini-2.5-flash' found in {py_file.name}",
+            )
+
+        # 3. Verify no independent model literals remain in the 6 production modules
+        # (they must use get_gemini_model() instead of hardcoded strings)
         for mod_name in production_modules:
             mod_path = backend_dir / mod_name
             self.assertTrue(mod_path.is_file(), f"Expected production module {mod_path} exists")
             content = mod_path.read_text(encoding="utf-8")
 
-            self.assertNotIn(
-                "gemini-2.5-flash",
-                content,
-                f"Obsolete model 'gemini-2.5-flash' found in {mod_name}",
-            )
+            # Check that get_gemini_model is imported and used
             self.assertIn(
-                "gemini-3.6-flash",
+                "get_gemini_model",
                 content,
-                f"Supported model 'gemini-3.6-flash' not found in {mod_name}",
+                f"get_gemini_model not imported/used in {mod_name}",
+            )
+            # Ensure no hardcoded model string literals remain in these modules
+            self.assertNotIn(
+                'model="gemini-',
+                content,
+                f"Hardcoded Gemini model literal found in {mod_name}",
+            )
+            self.assertNotIn(
+                "model='gemini-",
+                content,
+                f"Hardcoded Gemini model literal found in {mod_name}",
             )
 
-        # Verify EvaluationResult default evaluator field
+        # 4. Verify EvaluationResult default evaluator field
         from backend.evaluator import EvaluationResult, evaluate_interview_answer
 
         res_default = EvaluationResult(
@@ -678,7 +700,7 @@ class TestPhase17ProductionHardening(unittest.TestCase):
         )
         self.assertEqual(res_default.evaluator, "gemini-3.6-flash")
 
-        # Verify mocked evaluate_interview_answer returns gemini-3.6-flash
+        # 5. Verify mocked evaluate_interview_answer returns gemini-3.6-flash
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.text = (
@@ -703,6 +725,174 @@ class TestPhase17ProductionHardening(unittest.TestCase):
                 mock_client.models.generate_content.assert_called_once()
                 call_kwargs = mock_client.models.generate_content.call_args.kwargs
                 self.assertEqual(call_kwargs.get("model"), "gemini-3.6-flash")
+
+    def test_27_gemini_configuration_hardening_and_override(self):
+        """
+        Proves that:
+        1. get_gemini_model() defaults to 'gemini-3.6-flash' when GEMINI_MODEL is absent or whitespace.
+        2. GEMINI_MODEL environment variable overrides the default model across all 6 production modules:
+           - backend.evaluator (evaluate_interview_answer & EvaluationResult)
+           - backend.interviewer (_generate_with_gemini)
+           - backend.document_processor (extract_candidate_profile_sync & extract_job_context_sync)
+           - backend.coaching (generate_coaching_report)
+           - backend.interview_engine (generate_follow_up_question & generate_claim_probe_question)
+           - backend.insights_engine (generate_insights_executive_summary)
+        3. Structured output parsing and schema validation remain completely intact with the overridden model.
+        """
+        import json
+        from backend.gemini_config import get_gemini_model, DEFAULT_GEMINI_MODEL
+        from backend.evaluator import EvaluationResult, evaluate_interview_answer
+        from backend.interviewer import generate_interviewer_response
+        from backend.document_processor import (
+            extract_candidate_profile_sync,
+            extract_job_context_sync,
+        )
+        from backend.coaching import generate_coaching_report
+        from backend.interview_engine import (
+            generate_follow_up_question,
+            generate_claim_probe_question,
+        )
+        from backend.insights_engine import generate_insights_executive_summary
+
+        # 1. Environment configuration behavior
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("GEMINI_MODEL", None)
+            self.assertEqual(get_gemini_model(), "gemini-3.6-flash")
+
+            os.environ["GEMINI_MODEL"] = "   "
+            self.assertEqual(get_gemini_model(), "gemini-3.6-flash")
+
+            custom_model = "gemini-test-custom-override"
+            os.environ["GEMINI_MODEL"] = custom_model
+            self.assertEqual(get_gemini_model(), custom_model)
+
+            # EvaluationResult dynamic default evaluator
+            res = EvaluationResult(
+                score=7,
+                feedback="Good answer",
+                technical_accuracy="Accurate",
+            )
+            self.assertEqual(res.evaluator, custom_model)
+
+        # 2. Structured output schema validation with custom model
+        custom_model = "gemini-custom-enterprise-model"
+        with patch.dict(os.environ, {"GEMINI_MODEL": custom_model, "GEMINI_API_KEY": "fake_key"}, clear=False):
+            # 2a. Evaluator
+            mock_client = MagicMock()
+            mock_resp = MagicMock()
+            mock_resp.text = (
+                '{"score": 9, "feedback": "Excellent explanation.", "technical_accuracy": "Precise.", '
+                '"strengths": ["Clear distinction"], "missing_points": []}'
+            )
+            mock_client.models.generate_content.return_value = mock_resp
+            with patch("google.genai.Client", return_value=mock_client):
+                eval_res = evaluate_interview_answer(
+                    question="What is a Python list?",
+                    category="Python",
+                    difficulty="easy",
+                    answer="A list is a mutable sequence.",
+                )
+                self.assertEqual(eval_res.evaluator, custom_model)
+                self.assertEqual(eval_res.score, 9)
+                self.assertEqual(mock_client.models.generate_content.call_args.kwargs.get("model"), custom_model)
+
+                # Verify structured schema validation remains intact
+                raw_json = eval_res.model_dump_json()
+                self.assertIn(custom_model, raw_json)
+                parsed_back = EvaluationResult.model_validate_json(raw_json)
+                self.assertEqual(parsed_back.evaluator, custom_model)
+
+            # 2b. Interviewer
+            mock_client.reset_mock()
+            mock_resp.text = json.dumps({"interviewer_response": "Understood.", "response_type": "acknowledgement"})
+            with patch("backend.interviewer.get_gemini_client", return_value=mock_client):
+                generate_interviewer_response(
+                    {"current_category": "Python", "next_category": "Python"},
+                    action="continue",
+                    is_same_category=True,
+                )
+            self.assertEqual(mock_client.models.generate_content.call_args.kwargs.get("model"), custom_model)
+
+            # 2c. Document Processor (Resume & JD)
+            mock_client.reset_mock()
+            mock_resp.text = json.dumps({
+                "skills": ["Python"],
+                "past_roles": ["Software Engineer"],
+                "projects": [],
+                "years_of_experience": 5,
+                "top_domains": ["Backend"],
+                "claims": []
+            })
+            with patch("backend.document_processor._get_gemini_client", return_value=mock_client):
+                p = extract_candidate_profile_sync("Senior Dev with Python experience")
+                self.assertEqual(mock_client.models.generate_content.call_args.kwargs.get("model"), custom_model)
+                self.assertEqual(p.skills, ["Python"])
+
+                mock_client.reset_mock()
+                mock_resp.text = json.dumps({
+                    "title": "Backend Engineer",
+                    "required_skills": ["Python"],
+                    "preferred_skills": [],
+                    "responsibilities": [],
+                    "seniority_level": "senior"
+                })
+                j = extract_job_context_sync("Looking for Backend Engineer with Python")
+                self.assertEqual(mock_client.models.generate_content.call_args.kwargs.get("model"), custom_model)
+                self.assertEqual(j.title, "Backend Engineer")
+
+            # 2d. Coaching
+            mock_client.reset_mock()
+            mock_client.models.generate_content.side_effect = Exception("Fallback test")
+            dummy_signals = {
+                "session_id": 1,
+                "technical": {"overall_average_score": 7.0},
+            }
+            generate_coaching_report(dummy_signals, client=mock_client)
+            self.assertEqual(mock_client.models.generate_content.call_args.kwargs.get("model"), custom_model)
+
+            # 2e. Interview Engine (Follow-up & Claim Probing)
+            mock_client.reset_mock()
+            mock_client.models.generate_content.side_effect = None
+            mock_resp.text = "Can you elaborate on list mutability?"
+            mock_client.models.generate_content.return_value = mock_resp
+            with patch("google.genai.Client", return_value=mock_client):
+                follow_up = generate_follow_up_question(
+                    original_question="What is a Python list?",
+                    candidate_answer="A list is mutable.",
+                    evaluation_feedback="Needs more depth.",
+                    missing_points=["Trade-offs"],
+                )
+                self.assertEqual(mock_client.models.generate_content.call_args.kwargs.get("model"), custom_model)
+                self.assertEqual(follow_up, "Can you elaborate on list mutability?")
+
+            mock_client.reset_mock()
+            mock_resp.text = "How did you scale the caching system in Redis?"
+            with patch("google.genai.Client", return_value=mock_client):
+                claim_dict = {
+                    "statement": "Scaled Redis cache to 10k QPS",
+                    "project_name": "Caching Layer",
+                    "technologies": ["Redis", "Python"],
+                    "metric": "10k QPS",
+                    "ownership": "primary",
+                    "claim_type": "scaling",
+                }
+                probe = generate_claim_probe_question(claim_dict, angle="technical_mechanism")
+                self.assertEqual(mock_client.models.generate_content.call_args.kwargs.get("model"), custom_model)
+                self.assertEqual(probe, "How did you scale the caching system in Redis?")
+
+            # 2f. Insights Engine
+            mock_client.reset_mock()
+            mock_resp.text = "Candidate demonstrated consistent performance across technical evaluations."
+            with patch("google.genai.Client", return_value=mock_client):
+                dummy_payload = {
+                    "total_completed_interviews": 2,
+                    "technical_progression": {"trend": "improving", "first_score": 6.0, "latest_score": 8.0, "absolute_change": 2.0},
+                    "consistency": {"best_session": {"score": 8.0, "categories": ["Python"]}},
+                    "resume_claim_analytics": {"claim_instances_probed": 1, "substantiation_breakdown": {"strongly_substantiated": 1}},
+                }
+                summary = generate_insights_executive_summary(dummy_payload)
+                self.assertEqual(mock_client.models.generate_content.call_args.kwargs.get("model"), custom_model)
+                self.assertEqual(summary, "Candidate demonstrated consistent performance across technical evaluations.")
 
 
 if __name__ == "__main__":
