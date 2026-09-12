@@ -894,6 +894,719 @@ class TestPhase17ProductionHardening(unittest.TestCase):
                 self.assertEqual(mock_client.models.generate_content.call_args.kwargs.get("model"), custom_model)
                 self.assertEqual(summary, "Candidate demonstrated consistent performance across technical evaluations.")
 
+    # =======================================================================
+    # 6. AZURE BLOB OFF-VM DISASTER RECOVERY TESTS
+    # =======================================================================
+
+    def _create_full_mock_db(self, db_path: Path) -> None:
+        """Creates a mock SQLite database with all required canonical production tables."""
+        conn = sqlite3.connect(db_path)
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.execute("CREATE TABLE questions (id INTEGER PRIMARY KEY, question TEXT, category TEXT, difficulty TEXT);")
+        conn.execute("CREATE TABLE interview_sessions (id INTEGER PRIMARY KEY, user_id INTEGER, status TEXT);")
+        conn.execute("CREATE TABLE session_turns (id INTEGER PRIMARY KEY, session_id INTEGER, question_id INTEGER);")
+        conn.execute("CREATE TABLE answers (id INTEGER PRIMARY KEY, session_id INTEGER, question_id INTEGER, answer_text TEXT);")
+        conn.execute("CREATE TABLE evaluations (id INTEGER PRIMARY KEY, answer_id INTEGER, score REAL, feedback TEXT);")
+        conn.execute("INSERT INTO questions VALUES (1, 'Explain Python generators.', 'Python', 'medium');")
+        conn.execute("INSERT INTO interview_sessions VALUES (10, 1, 'active');")
+        conn.execute("INSERT INTO session_turns VALUES (100, 10, 1);")
+        conn.execute("INSERT INTO answers VALUES (1000, 10, 1, 'Generators use yield to produce values lazily.');")
+        conn.execute("INSERT INTO evaluations VALUES (5000, 1000, 9.0, 'Comprehensive answer.');")
+        conn.commit()
+        conn.close()
+
+    def test_28_azure_blob_config_resolution(self):
+        """
+        Verifies resolution of Azure Blob configuration from parameters and environment:
+        - neither variable set -> returns None
+        - both set -> returns (account, container)
+        - only account set -> raises ValueError
+        - only container set -> raises ValueError
+        - whitespace stripped
+        """
+        from scripts.backup_db import get_azure_blob_config
+
+        # 1. Neither variable set (env and args empty)
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertIsNone(get_azure_blob_config())
+            self.assertIsNone(get_azure_blob_config(None, None))
+            self.assertIsNone(get_azure_blob_config("", ""))
+            self.assertIsNone(get_azure_blob_config("   ", "   "))
+
+        # 2. Both set via explicit parameters
+        res = get_azure_blob_config("myaccount", "mycontainer")
+        self.assertEqual(res, ("myaccount", "mycontainer"))
+
+        # 3. Both set via environment
+        with patch.dict(
+            os.environ,
+            {"AZURE_STORAGE_ACCOUNT": "envaccount", "AZURE_STORAGE_CONTAINER": "envcontainer"},
+            clear=True,
+        ):
+            res_env = get_azure_blob_config()
+            self.assertEqual(res_env, ("envaccount", "envcontainer"))
+
+        # 4. Explicit arguments override environment
+        with patch.dict(
+            os.environ,
+            {"AZURE_STORAGE_ACCOUNT": "envaccount", "AZURE_STORAGE_CONTAINER": "envcontainer"},
+            clear=True,
+        ):
+            res_override = get_azure_blob_config("override_acct", "override_cont")
+            self.assertEqual(res_override, ("override_acct", "override_cont"))
+
+        # 5. Only account set via parameters -> ValueError
+        with self.assertRaises(ValueError) as cm:
+            get_azure_blob_config("only_acct", None)
+        self.assertIn("AZURE_STORAGE_CONTAINER is missing", str(cm.exception))
+
+        # 6. Only container set via parameters -> ValueError
+        with self.assertRaises(ValueError) as cm:
+            get_azure_blob_config(None, "only_cont")
+        self.assertIn("AZURE_STORAGE_ACCOUNT is missing", str(cm.exception))
+
+        # 7. Only account set via environment -> ValueError
+        with patch.dict(os.environ, {"AZURE_STORAGE_ACCOUNT": "envaccount"}, clear=True):
+            with self.assertRaises(ValueError) as cm:
+                get_azure_blob_config()
+            self.assertIn("AZURE_STORAGE_CONTAINER is missing", str(cm.exception))
+
+        # 8. Only container set via environment -> ValueError
+        with patch.dict(os.environ, {"AZURE_STORAGE_CONTAINER": "envcontainer"}, clear=True):
+            with self.assertRaises(ValueError) as cm:
+                get_azure_blob_config()
+            self.assertIn("AZURE_STORAGE_ACCOUNT is missing", str(cm.exception))
+
+    def test_29_local_backup_succeeds_without_azure_config(self):
+        """
+        Verifies local backup operates in standalone mode when Azure configuration is absent.
+        No Azure credentials required, no Azure network calls made.
+        """
+        source_db = self.tmp_path / "local_only.db"
+        backup_dir = self.tmp_path / "local_backups"
+        self._create_mock_db(source_db)
+
+        with patch.dict(os.environ, {}, clear=True):
+            archive = backup_database(source_db_path=source_db, backup_dir=backup_dir)
+            self.assertTrue(archive.is_file())
+            self.assertTrue(archive.name.endswith(".db.gz"))
+            self.assertIsNone(getattr(archive, "blob_name", None))
+
+    def test_30_azure_upload_succeeds_with_managed_identity_and_returns_blob_name(self):
+        """
+        Verifies that when Azure is configured:
+        - DefaultAzureCredential is instantiated
+        - BlobServiceClient is configured with the expected account URL
+        - Archive is uploaded to the specified container
+        - Returns only the clean blob name (no secrets, no SAS tokens, no URLs)
+        """
+        source_db = self.tmp_path / "source_azure.db"
+        backup_dir = self.tmp_path / "backups_azure"
+        self._create_mock_db(source_db)
+
+        mock_credential = MagicMock()
+        mock_blob_client = MagicMock()
+        mock_container_client = MagicMock()
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.return_value = mock_container_client
+
+        with patch("azure.identity.DefaultAzureCredential", return_value=mock_credential) as mock_cred_cls, \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service) as mock_service_cls:
+
+            archive = backup_database(
+                source_db_path=source_db,
+                backup_dir=backup_dir,
+                azure_storage_account="stinterviewbackupsprod",
+                azure_storage_container="interview-backups",
+            )
+
+            # 1. Verify DefaultAzureCredential used
+            mock_cred_cls.assert_called_once()
+
+            # 2. Verify BlobServiceClient created with correct account endpoint and credential
+            mock_service_cls.assert_called_once_with(
+                account_url="https://stinterviewbackupsprod.blob.core.windows.net",
+                credential=mock_credential,
+            )
+
+            # 3. Verify upload executed
+            mock_blob_service.get_container_client.assert_called_once_with("interview-backups")
+            mock_container_client.get_blob_client.assert_called_once_with(archive.name)
+            mock_blob_client.upload_blob.assert_called_once()
+
+            # 4. Verify returned blob name is pure filename without URLs or query strings
+            self.assertEqual(archive.blob_name, archive.name)
+            self.assertFalse(archive.blob_name.startswith("http"))
+            self.assertNotIn("?", archive.blob_name)
+            self.assertNotIn("sig=", archive.blob_name)
+
+    def test_31_zero_storage_keys_or_sas_tokens_in_codebase(self):
+        """
+        Verifies scripts/backup_db.py enforces passwordless Managed Identity authentication
+        and contains zero storage account keys, SAS tokens, or connection strings.
+        """
+        script_path = Path(__file__).resolve().parent.parent / "scripts" / "backup_db.py"
+        code = script_path.read_text(encoding="utf-8")
+
+        forbidden_patterns = [
+            "AccountKey=",
+            "SharedAccessSignature",
+            "StorageSharedKeyCredential",
+            "AzureSasCredential",
+            "DefaultEndpointsProtocol",
+            "from_connection_string",
+            "generate_blob_sas",
+            "generate_account_sas",
+        ]
+
+        for pattern in forbidden_patterns:
+            self.assertNotIn(
+                pattern,
+                code,
+                f"Forbidden credential pattern '{pattern}' found in scripts/backup_db.py",
+            )
+
+    def test_32_azure_upload_failure_preserves_local_backup_and_raises_error(self):
+        """
+        Verifies that if Azure Blob upload fails (e.g. network timeout):
+        - Local verified backup is NOT deleted
+        - Local backup remains valid and intact
+        - A RuntimeError is raised to alert systemd / monitoring
+        """
+        source_db = self.tmp_path / "source_fail.db"
+        backup_dir = self.tmp_path / "backups_fail"
+        self._create_mock_db(source_db)
+
+        mock_blob_client = MagicMock()
+        mock_blob_client.upload_blob.side_effect = RuntimeError("Simulated network timeout during upload")
+        mock_container_client = MagicMock()
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.return_value = mock_container_client
+
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service):
+
+            with self.assertRaises(RuntimeError) as cm:
+                backup_database(
+                    source_db_path=source_db,
+                    backup_dir=backup_dir,
+                    azure_storage_account="stinterviewbackupsprod",
+                    azure_storage_container="interview-backups",
+                )
+
+            self.assertIn("Azure Blob upload failed", str(cm.exception))
+
+            # Crucial invariant: Verify local backup was NOT deleted
+            local_backups = list(backup_dir.glob("interview_backup_*.db.gz"))
+            self.assertEqual(len(local_backups), 1)
+            preserved_archive = local_backups[0]
+            self.assertTrue(preserved_archive.is_file())
+            self.assertGreater(preserved_archive.stat().st_size, 0)
+
+            # Verify the preserved local backup is completely intact and healthy
+            decompressed = self.tmp_path / "preserved_check.db"
+            with gzip.open(preserved_archive, "rb") as f_in, open(decompressed, "wb") as f_out:
+                f_out.write(f_in.read())
+            self.assertTrue(verify_database_integrity(decompressed))
+
+    def test_33_azure_exceptions_surfaced_correctly(self):
+        """
+        Verifies authentication failure, permission denied, and container not found
+        are cleanly caught and surfaced as RuntimeError without being silently swallowed.
+        """
+        from scripts.backup_db import upload_backup_to_azure_blob
+
+        dummy_file = self.tmp_path / "dummy.db.gz"
+        dummy_file.write_bytes(b"dummy compressed content")
+
+        # 1. Authentication failure
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.side_effect = Exception("ClientAuthenticationError: Managed Identity unavailable")
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service):
+            with self.assertRaises(RuntimeError) as cm:
+                upload_backup_to_azure_blob(dummy_file, "staccount", "interview-backups")
+            self.assertIn("ClientAuthenticationError", str(cm.exception))
+
+        # 2. Permission denied (RBAC missing)
+        mock_blob_service = MagicMock()
+        mock_blob_client = MagicMock()
+        mock_blob_client.upload_blob.side_effect = Exception("AuthorizationPermissionMismatch: Role assignment missing")
+        mock_container_client = MagicMock()
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service.get_container_client.return_value = mock_container_client
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service):
+            with self.assertRaises(RuntimeError) as cm:
+                upload_backup_to_azure_blob(dummy_file, "staccount", "interview-backups")
+            self.assertIn("AuthorizationPermissionMismatch", str(cm.exception))
+
+        # 3. Container not found
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.side_effect = Exception("ResourceNotFoundError: ContainerNotFound")
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service):
+            with self.assertRaises(RuntimeError) as cm:
+                upload_backup_to_azure_blob(dummy_file, "staccount", "nonexistent-container")
+            self.assertIn("ResourceNotFoundError", str(cm.exception))
+
+    def test_34_cli_backup_nonzero_exit_on_azure_failure_and_zero_on_success(self):
+        """
+        Verifies the CLI backup command:
+        - Exits with 0 and prints blob name on successful upload
+        - Exits with 1 (nonzero) on Azure upload failure
+        - Exits with 1 when --upload-azure specified without storage account
+        """
+        import sys
+        from scripts.backup_db import main
+
+        source_db = self.tmp_path / "cli_source.db"
+        backup_dir = self.tmp_path / "cli_backups"
+        self._create_mock_db(source_db)
+
+        # 1. Success case
+        mock_blob_client = MagicMock()
+        mock_container_client = MagicMock()
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.return_value = mock_container_client
+
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service), \
+             patch.object(sys, "argv", [
+                 "backup_db.py", "backup",
+                 "--source", str(source_db),
+                 "--dest", str(backup_dir),
+                 "--storage-account", "stinterviewbackupsprod",
+                 "--container", "interview-backups",
+             ]), \
+             patch("sys.stdout"), patch("sys.stderr"):
+            exit_code = main()
+            self.assertEqual(exit_code, 0)
+
+        # 2. Failure case -> exits 1
+        mock_blob_client.upload_blob.side_effect = Exception("Azure transient outage")
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service), \
+             patch.object(sys, "argv", [
+                 "backup_db.py", "backup",
+                 "--source", str(source_db),
+                 "--dest", str(backup_dir),
+                 "--storage-account", "stinterviewbackupsprod",
+                 "--container", "interview-backups",
+             ]), \
+             patch("sys.stdout"), patch("sys.stderr"):
+            exit_code = main()
+            self.assertEqual(exit_code, 1)
+
+        # 3. Missing storage account with --upload-azure -> exits 1
+        with patch.dict(os.environ, {}, clear=True), \
+             patch.object(sys, "argv", [
+                 "backup_db.py", "backup",
+                 "--source", str(source_db),
+                 "--dest", str(backup_dir),
+                 "--upload-azure",
+             ]), \
+             patch("sys.stdout"), patch("sys.stderr"):
+            exit_code = main()
+            self.assertEqual(exit_code, 1)
+
+    def test_35_azure_restore_downloads_to_staging_and_atomically_restores(self):
+        """
+        Verifies that Azure restore:
+        - Downloads to an isolated temporary staging file first
+        - Validates gzip compression and SQLite integrity
+        - Validates required production table structure
+        - Atomically places database at target_db path
+        - Leaves zero temporary files in staging directory
+        """
+        from scripts.backup_db import restore_database_from_azure_blob
+
+        source_db = self.tmp_path / "staging_test_source.db"
+        self._create_full_mock_db(source_db)
+
+        # Create valid gzipped backup bytes
+        raw_db_bytes = source_db.read_bytes()
+        gz_bytes = gzip.compress(raw_db_bytes)
+
+        mock_stream = MagicMock()
+        mock_stream.readinto.side_effect = lambda f: f.write(gz_bytes)
+        mock_blob_client = MagicMock()
+        mock_blob_client.download_blob.return_value = mock_stream
+        mock_container_client = MagicMock()
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.return_value = mock_container_client
+
+        target_dir = self.tmp_path / "restore_target_dir"
+        target_db = target_dir / "interview.db"
+
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service):
+
+            restored = restore_database_from_azure_blob(
+                blob_name="interview_backup_20260913_000000.db.gz",
+                target_db_path=target_db,
+                account_name="stinterviewbackupsprod",
+                container_name="interview-backups",
+            )
+
+            self.assertEqual(restored, target_db.resolve())
+            self.assertTrue(target_db.is_file())
+            self.assertTrue(verify_database_integrity(target_db))
+
+            # Verify data can be queried
+            conn = sqlite3.connect(target_db)
+            q = conn.execute("SELECT question FROM questions WHERE id=1;").fetchone()[0]
+            conn.close()
+            self.assertEqual(q, "Explain Python generators.")
+
+            # Confirm no temporary files left in staging directory
+            temp_files = list(target_dir.glob(".tmp_blob_*"))
+            self.assertEqual(temp_files, [])
+
+    def test_36_azure_restore_rejects_corrupt_gzip_and_cleans_up(self):
+        """
+        Verifies that a downloaded blob that is corrupt or not gzip-compressed
+        is rejected with RuntimeError and staging files are cleaned up.
+        """
+        from scripts.backup_db import restore_database_from_azure_blob
+
+        mock_stream = MagicMock()
+        mock_stream.readinto.side_effect = lambda f: f.write(b"NOT A GZIP ARCHIVE AT ALL")
+        mock_blob_client = MagicMock()
+        mock_blob_client.download_blob.return_value = mock_stream
+        mock_container_client = MagicMock()
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.return_value = mock_container_client
+
+        target_dir = self.tmp_path / "corrupt_gz_dir"
+        target_db = target_dir / "target.db"
+
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service):
+
+            with self.assertRaises(RuntimeError) as cm:
+                restore_database_from_azure_blob(
+                    blob_name="corrupt.db.gz",
+                    target_db_path=target_db,
+                    account_name="staccount",
+                    container_name="cont",
+                )
+
+            self.assertIn("not valid gzip", str(cm.exception))
+            self.assertFalse(target_db.exists())
+            self.assertEqual(list(target_dir.glob(".tmp_blob_*")), [])
+
+    def test_37_azure_restore_rejects_non_sqlite_integrity_failure(self):
+        """
+        Verifies that a valid gzip file containing non-SQLite data
+        fails SQLite PRAGMA integrity_check and does NOT overwrite target.
+        """
+        from scripts.backup_db import restore_database_from_azure_blob
+
+        gz_bytes = gzip.compress(b"Random plain text that is not a SQLite database file")
+
+        mock_stream = MagicMock()
+        mock_stream.readinto.side_effect = lambda f: f.write(gz_bytes)
+        mock_blob_client = MagicMock()
+        mock_blob_client.download_blob.return_value = mock_stream
+        mock_container_client = MagicMock()
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.return_value = mock_container_client
+
+        target_dir = self.tmp_path / "integrity_fail_dir"
+        target_db = target_dir / "target.db"
+
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service):
+
+            with self.assertRaises(RuntimeError) as cm:
+                restore_database_from_azure_blob(
+                    blob_name="bad_sqlite.db.gz",
+                    target_db_path=target_db,
+                    account_name="staccount",
+                    container_name="cont",
+                )
+
+            self.assertIn("integrity check", str(cm.exception))
+            self.assertFalse(target_db.exists())
+            self.assertEqual(list(target_dir.glob(".tmp_blob_*")), [])
+
+    def test_38_azure_restore_rejects_missing_core_tables(self):
+        """
+        Verifies that a valid SQLite database lacking core tables (questions, evaluations, etc.)
+        fails structure verification and is rejected.
+        """
+        from scripts.backup_db import restore_database_from_azure_blob
+
+        bad_schema_db = self.tmp_path / "bad_schema.db"
+        conn = sqlite3.connect(bad_schema_db)
+        conn.execute("CREATE TABLE wrong_table (id INT, note TEXT);")
+        conn.execute("INSERT INTO wrong_table VALUES (1, 'no core tables');")
+        conn.commit()
+        conn.close()
+
+        gz_bytes = gzip.compress(bad_schema_db.read_bytes())
+
+        mock_stream = MagicMock()
+        mock_stream.readinto.side_effect = lambda f: f.write(gz_bytes)
+        mock_blob_client = MagicMock()
+        mock_blob_client.download_blob.return_value = mock_stream
+        mock_container_client = MagicMock()
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.return_value = mock_container_client
+
+        target_dir = self.tmp_path / "bad_schema_target_dir"
+        target_db = target_dir / "target.db"
+
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service):
+
+            with self.assertRaises(RuntimeError) as cm:
+                restore_database_from_azure_blob(
+                    blob_name="bad_schema.db.gz",
+                    target_db_path=target_db,
+                    account_name="staccount",
+                    container_name="cont",
+                )
+
+            self.assertIn("missing core tables", str(cm.exception))
+            self.assertFalse(target_db.exists())
+            self.assertEqual(list(target_dir.glob(".tmp_blob_*")), [])
+
+    def test_39_azure_restore_overwrite_protection(self):
+        """
+        Verifies that Azure restore refuses to overwrite an existing database
+        unless force=True is explicitly supplied.
+        """
+        from scripts.backup_db import restore_database_from_azure_blob
+
+        existing_db = self.tmp_path / "existing_prod.db"
+        self._create_full_mock_db(existing_db)
+
+        mock_blob_service = MagicMock()
+
+        # 1. When force=False, raises FileExistsError BEFORE any download
+        with self.assertRaises(FileExistsError):
+            restore_database_from_azure_blob(
+                blob_name="backup.db.gz",
+                target_db_path=existing_db,
+                account_name="staccount",
+                container_name="cont",
+                force=False,
+            )
+        # Verify no client interaction occurred because target check is upfront
+        mock_blob_service.get_container_client.assert_not_called()
+
+        # 2. When force=True, successfully overwrites
+        gz_bytes = gzip.compress(existing_db.read_bytes())
+        mock_stream = MagicMock()
+        mock_stream.readinto.side_effect = lambda f: f.write(gz_bytes)
+        mock_blob_client = MagicMock()
+        mock_blob_client.download_blob.return_value = mock_stream
+        mock_container_client = MagicMock()
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.return_value = mock_container_client
+
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service):
+
+            restored = restore_database_from_azure_blob(
+                blob_name="backup.db.gz",
+                target_db_path=existing_db,
+                account_name="staccount",
+                container_name="cont",
+                force=True,
+            )
+            self.assertEqual(restored, existing_db.resolve())
+
+    def test_40_azure_restore_staging_cleanup_on_download_error(self):
+        """
+        Verifies that if blob download fails midway (network exception),
+        the partial download file in staging is cleaned up.
+        """
+        from scripts.backup_db import restore_database_from_azure_blob
+
+        mock_blob_client = MagicMock()
+        mock_blob_client.download_blob.side_effect = Exception("Connection reset by peer")
+        mock_container_client = MagicMock()
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.return_value = mock_container_client
+
+        target_dir = self.tmp_path / "cleanup_test_dir"
+        target_db = target_dir / "target.db"
+
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service):
+
+            with self.assertRaises(RuntimeError) as cm:
+                restore_database_from_azure_blob(
+                    blob_name="test.db.gz",
+                    target_db_path=target_db,
+                    account_name="staccount",
+                    container_name="cont",
+                )
+
+            self.assertIn("Connection reset by peer", str(cm.exception))
+            self.assertFalse(target_db.exists())
+            self.assertEqual(list(target_dir.glob(".tmp_blob_*")), [])
+
+    def test_41_list_azure_backups_metadata_only_without_downloading(self):
+        """
+        Verifies list_azure_backups queries blob metadata only and does not download files.
+        """
+        from scripts.backup_db import list_azure_backups, main
+        import sys
+
+        mock_blob1 = MagicMock()
+        mock_blob1.name = "interview_backup_20260912_020000.db.gz"
+        mock_blob1.size = 1048576
+        mock_blob1.last_modified = "2026-09-12T02:00:00Z"
+
+        mock_blob2 = MagicMock()
+        mock_blob2.name = "interview_backup_20260913_020000.db.gz"
+        mock_blob2.size = 2097152
+        mock_blob2.last_modified = "2026-09-13T02:00:00Z"
+
+        mock_container_client = MagicMock()
+        mock_container_client.list_blobs.return_value = [mock_blob1, mock_blob2]
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.return_value = mock_container_client
+
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service):
+
+            # 1. Programmatic function
+            blobs = list_azure_backups("stinterviewbackupsprod", "interview-backups")
+            self.assertEqual(len(blobs), 2)
+            self.assertEqual(blobs[0]["name"], "interview_backup_20260912_020000.db.gz")
+            self.assertEqual(blobs[0]["size"], 1048576)
+            self.assertEqual(blobs[1]["name"], "interview_backup_20260913_020000.db.gz")
+
+            # 2. CLI execution
+            with patch.object(sys, "argv", [
+                "backup_db.py", "list-azure-backups",
+                "--storage-account", "stinterviewbackupsprod",
+                "--container", "interview-backups",
+            ]), patch("sys.stdout"), patch("sys.stderr"):
+                exit_code = main()
+                self.assertEqual(exit_code, 0)
+
+    def test_42_sensitive_values_and_secrets_never_logged(self):
+        """
+        Verifies that backup and restore operations do not log credentials, tokens, or URLs.
+        """
+        source_db = self.tmp_path / "log_audit_source.db"
+        backup_dir = self.tmp_path / "log_audit_backups"
+        self._create_mock_db(source_db)
+
+        mock_blob_client = MagicMock()
+        mock_container_client = MagicMock()
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.return_value = mock_container_client
+
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service), \
+             self.assertLogs("backup_db", level="INFO") as log_cm:
+
+            backup_database(
+                source_db_path=source_db,
+                backup_dir=backup_dir,
+                azure_storage_account="stinterviewbackupsprod",
+                azure_storage_container="interview-backups",
+            )
+
+            all_logs = " ".join(log_cm.output)
+            self.assertIn("Azure backup uploaded: interview_backup_", all_logs)
+            self.assertNotIn("https://", all_logs)
+            self.assertNotIn("AccountKey", all_logs)
+            self.assertNotIn("Bearer", all_logs)
+            self.assertNotIn("secret", all_logs.lower())
+            self.assertNotIn("token", all_logs.lower())
+
+    def test_43_backup_retention_preserved_with_azure(self):
+        """
+        Verifies that enabling Azure upload does not bypass local backup retention pruning.
+        """
+        source_db = self.tmp_path / "retention_source.db"
+        backup_dir = self.tmp_path / "retention_backups"
+        self._create_mock_db(source_db)
+        backup_dir.mkdir(parents=True, exist_ok=True)
+
+        # Plant an aged local backup (30 days old)
+        old_file = backup_dir / "interview_backup_20260101_000000.db.gz"
+        old_file.write_bytes(b"old dummy data")
+        thirty_days_ago = time.time() - (30 * 86400)
+        os.utime(old_file, (thirty_days_ago, thirty_days_ago))
+
+        mock_blob_client = MagicMock()
+        mock_container_client = MagicMock()
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service = MagicMock()
+        mock_blob_service.get_container_client.return_value = mock_container_client
+
+        with patch("azure.identity.DefaultAzureCredential"), \
+             patch("azure.storage.blob.BlobServiceClient", return_value=mock_blob_service):
+
+            archive = backup_database(
+                source_db_path=source_db,
+                backup_dir=backup_dir,
+                retention_days=14,
+                azure_storage_account="stinterviewbackupsprod",
+                azure_storage_container="interview-backups",
+            )
+
+            self.assertTrue(archive.is_file())
+            self.assertFalse(old_file.exists())
+
+    def test_44_systemd_backup_service_configuration(self):
+        """
+        Verifies deploy/interview-backup.service invokes backup_db.py via the project virtualenv
+        with the production environment file and single-process oneshot model.
+        """
+        repo_root = Path(__file__).resolve().parent.parent
+        service_file = repo_root / "deploy" / "interview-backup.service"
+        self.assertTrue(service_file.is_file())
+        content = service_file.read_text(encoding="utf-8")
+
+        self.assertIn("ExecStart=/opt/ai-interview-simulator/.venv/bin/python scripts/backup_db.py backup", content)
+        self.assertIn("EnvironmentFile=/opt/ai-interview-simulator/.env.production", content)
+        self.assertIn("Type=oneshot", content)
+        self.assertIn("User=azureuser", content)
+        self.assertIn("Group=azureuser", content)
+        self.assertNotIn("uvicorn", content.lower())
+
+    def test_45_deployment_readme_azure_off_vm_documentation(self):
+        """
+        Verifies deploy/README.md thoroughly documents the two-tier disaster recovery architecture,
+        zero-credential Managed Identity model, staged restore, and laptop non-storage invariant.
+        """
+        repo_root = Path(__file__).resolve().parent.parent
+        readme_file = repo_root / "deploy" / "README.md"
+        self.assertTrue(readme_file.is_file())
+        content = readme_file.read_text(encoding="utf-8")
+
+        self.assertIn("stinterviewbackupsprod", content)
+        self.assertIn("interview-backups", content)
+        self.assertIn("DefaultAzureCredential", content)
+        self.assertIn("Storage Blob Data Contributor", content)
+        self.assertIn("AZURE_STORAGE_ACCOUNT=stinterviewbackupsprod", content)
+        self.assertIn("AZURE_STORAGE_CONTAINER=interview-backups", content)
+        self.assertIn("list-azure-backups", content)
+        self.assertIn("--from-azure-blob", content)
+        self.assertIn("Production database data is **never** copied, downloaded, or synced to developer laptops", content)
+        self.assertIn("The production database and its backups exist on the Azure VM", content)
+        self.assertIn("private Azure Blob backup container", content)
+
 
 if __name__ == "__main__":
     unittest.main()

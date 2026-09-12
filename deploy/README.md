@@ -7,8 +7,8 @@ This directory contains production configuration templates and automation units 
 ## 1. Hard Production Invariants
 
 1. **No Production Data on Developer Laptop**:
-   - The developer laptop uses local/mock databases (`backend/interview.db`).
-   - Production sets `DATABASE_PATH=/data/interview.db` on the VM's persistent disk.
+   - The production database and its backups exist on the Azure VM (`/data/interview.db` and local retention backups at `/var/backups/interview-simulator`) and in the private Azure Blob backup container (`interview-backups` in `stinterviewbackupsprod`).
+   - No production data is copied or synchronized to the developer laptop; the developer laptop uses only local mock databases (`backend/interview.db`) and synthetic test fixtures.
    - `interview.db` is strictly ignored by Git and is never uploaded or transferred.
 2. **Process Supervision**:
    - Managed by systemd (`interview-simulator.service`).
@@ -58,6 +58,10 @@ GEMINI_API_KEY=
 DATABASE_PATH=/data/interview.db
 BACKUP_DIR=/var/backups/interview-simulator
 
+# Azure Blob Off-VM Disaster Recovery (Non-secret config; auth via Managed Identity)
+AZURE_STORAGE_ACCOUNT=stinterviewbackupsprod
+AZURE_STORAGE_CONTAINER=interview-backups
+
 # Machine Learning Runtime
 WHISPER_MODEL_SIZE=base.en
 WHISPER_DEVICE=cpu
@@ -100,21 +104,85 @@ curl -i http://127.0.0.1:8000/health
 
 ---
 
-## 5. Current Disaster-Recovery Limitations
+## 5. Off-VM Disaster Recovery Architecture (Azure Blob Storage)
 
-> [!WARNING]
-> **Known Single-VM / Same-Disk Limitation**:
-> In this initial deployment topology, both the primary database (`DATABASE_PATH=/data/interview.db`) and the automated backup directory (`BACKUP_DIR=/var/backups/interview-simulator`) reside on the virtual machine's primary managed disk.
->
-> - **What Nightly Backups Protect Against**: Logical database corruption, application transaction errors, accidental deletions, SQLite schema errors, and application service crashes.
-> - **What They Do NOT Protect Against**: Total VM destruction, catastrophic Azure managed disk failure, unrecoverable hypervisor crashes, or accidental VM deletion.
->
-> This setup is an initial deployment foundation and must **not** be mistaken for full disaster recovery.
->
-> **Future Off-VM Disaster Recovery**:
-> A complete disaster-recovery architecture requires off-VM replication. Azure Blob Storage (or an encrypted remote object store) is the primary candidate, but its applicability and ongoing costs under the user's specific Azure for Students subscription allowance must be confirmed before provisioning.
->
-> **Data Privacy Invariant**: Production interview data must **not** be synced or backed up to local developer laptops. Off-VM backups, once enabled, must reside strictly in an authenticated, encrypted, zero-cost cloud storage tier.
+The AI Interview Simulator employs a two-tier disaster recovery architecture:
+
+1. **Tier 1 — Local Online Backups**:
+   - Resides on the VM at `/var/backups/interview-simulator`.
+   - Created via `sqlite3.Connection.backup()` while the database is online and active.
+   - Verified with `PRAGMA integrity_check;` before gzip compression.
+   - Pruned automatically using a 14-day rolling retention policy.
+   - Protects against transaction errors, logical corruption, and application-level issues.
+
+2. **Tier 2 — Off-VM Replication (Azure Blob Storage)**:
+   - Storage Account: `stinterviewbackupsprod` (Standard, LRS, Hot, TLS 1.2 minimum).
+   - Container: `interview-backups` (Private, no anonymous access).
+   - Replicates the verified, compressed local backup archive to Azure Blob Storage immediately upon creation.
+   - Protects against total VM loss, disk corruption, hypervisor failure, or accidental deletion.
+
+### Current Disaster-Recovery Limitations & Evolution
+- **Historical Same-Disk Limitation**: In the initial single-tier deployment topology, backups resided on the same VM managed disk. Tier 2 Azure Blob replication provides true off-VM disaster recovery, resolving the single-disk failure mode.
+- **Data Privacy Invariant**: The production database and its backups exist on the Azure VM and in the private Azure Blob backup container. Production interview data must **not** be synced or backed up to local developer laptops. All backup, verification, and restore operations execute on the Azure VM and target only the VM filesystem and the private Azure Blob backup container.
+
+### Authentication & Zero-Credential Security
+- **Authentication Method**: Microsoft Entra / System-Assigned Managed Identity via `azure.identity.DefaultAzureCredential`.
+- **Assigned RBAC Role**: `Storage Blob Data Contributor` scoped to `stinterviewbackupsprod`.
+- **Zero Secrets Stored**: No storage account keys, connection strings, SAS tokens, or credentials exist in `.env.production`, source code, or logs.
+- **Data Privacy Invariant**: The production database and its backups exist on the Azure VM and in the private Azure Blob backup container. Production database data is **never** copied, downloaded, or synced to developer laptops. All backup and restore operations execute on the Azure VM and target only the VM filesystem and the private Azure Blob backup container.
+
+### Azure Portal Prerequisites & Cloud Infrastructure
+- **Storage Account**: `stinterviewbackupsprod` (Standard performance, LRS replication, Hot tier, Minimum TLS 1.2, Storage account key access disabled).
+- **Container**: `interview-backups` (Private / no anonymous public access).
+- **Managed Identity**: VM `interview-simulator-vm-korea` has System-Assigned Managed Identity enabled.
+- **RBAC Role Assignment**: `Storage Blob Data Contributor` granted to the VM's Managed Identity at the storage account scope.
+- **Production Environment Variables** (in `/opt/ai-interview-simulator/.env.production`):
+  ```bash
+  AZURE_STORAGE_ACCOUNT=stinterviewbackupsprod
+  AZURE_STORAGE_CONTAINER=interview-backups
+  ```
+
+### Backup Flow & Failure Handling Behavior
+1. **Local Backup First**: SQLite online backup is performed via `sqlite3.Connection.backup()`, integrity verified with `PRAGMA integrity_check;`, compressed with gzip, and atomically finalized at `/var/backups/interview-simulator/`.
+2. **Local Retention**: Aged local backups older than 14 days are pruned automatically.
+3. **Azure Replication**: The verified gzip archive is uploaded to `interview-backups` using `DefaultAzureCredential`.
+4. **Local Backup Protection on Failure**: If Azure upload fails due to network outage, credential expiration, or Azure downtime, the local backup archive is **never deleted**. It remains intact on the VM disk.
+5. **Systemd Alerting**: On Azure upload failure, `scripts/backup_db.py` logs the error and exits with code 1 (nonzero), causing systemd to flag the unit as failed so monitoring tools immediately detect the issue.
+
+### Safe VM-Side Operator Verification Commands
+
+Verify remote backup blobs exist without downloading data to developer machines:
+
+```bash
+# List backup blobs in the private Azure container from the VM (metadata only):
+/opt/ai-interview-simulator/.venv/bin/python scripts/backup_db.py list-azure-backups
+```
+
+### Staged Disaster Recovery Restore Procedure
+
+To restore from an off-VM Azure Blob backup, the procedure enforces strict isolation:
+
+```bash
+# 1. Staged Restore to an isolated path (does NOT overwrite live /data/interview.db):
+/opt/ai-interview-simulator/.venv/bin/python scripts/backup_db.py restore \
+  --from-azure-blob interview_backup_YYYYMMDD_HHMMSS.db.gz \
+  --target-db /tmp/staged_restore_test.db
+
+# 2. Verify integrity and structure of the staged database:
+sqlite3 /tmp/staged_restore_test.db "PRAGMA integrity_check;"
+sqlite3 /tmp/staged_restore_test.db "SELECT count(*) FROM questions;"
+
+# 3. Clean up the staging database when testing:
+rm -f /tmp/staged_restore_test.db
+
+# 4. Production replacement (requires explicit --force flag and deliberate operator execution):
+# Stop service before live database replacement:
+# sudo systemctl stop interview-simulator
+# /opt/ai-interview-simulator/.venv/bin/python scripts/backup_db.py restore \
+#   --from-azure-blob interview_backup_YYYYMMDD_HHMMSS.db.gz \
+#   --target-db /data/interview.db --force
+# sudo systemctl start interview-simulator
+```
 
 ---
 
