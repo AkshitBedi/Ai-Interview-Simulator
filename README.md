@@ -1,4 +1,4 @@
-﻿# Interview Prep — AI Interview Simulator
+# Interview Prep — AI Interview Simulator
 
 A production-grade technical interview simulation and communication intelligence platform. The system conducts realistic, multi-turn technical interviews across Software Engineering domains (Python, Databases & SQL, System Design, and Behavioral), evaluates candidate responses, extracts speech and nonverbal telemetry, and provides evidence-based coaching and longitudinal analytics.
 
@@ -126,14 +126,14 @@ The application is built on a Python FastAPI backend, an embedded SQLite databas
 | :--- | :--- | :--- |
 | **Frontend** | Vanilla HTML5, CSS3, JavaScript (ES6+) | Single-file SPA in `web/index.html`. Zero dependencies, zero build steps, zero node/npm requirements. |
 | **Backend Framework** | FastAPI, Uvicorn, Starlette | Python asynchronous web framework with Pydantic v2 data validation and OpenAPI schema generation. |
-| **Runtime** | Python 3.10+ (tested through 3.14) | System or virtualenv Python runtime. |
+| **Runtime** | Python 3.10–3.12 | Supported and validated Python runtime environment. |
 | **Database** | SQLite 3 | Embedded database operating in Write-Ahead Logging (`WAL`) mode with `busy_timeout = 5000` and `synchronous = NORMAL`. |
 | **AI / LLM** | Google Gemini API (`google-genai`) | Centralized configuration in `gemini_config.py`. Default model `gemini-3.6-flash` (configurable via `GEMINI_MODEL`). Context-aware deterministic heuristic fallback when API key is unavailable. |
 | **Speech-to-Text** | `faster-whisper` | Fast, offline transcription using CTranslate2 (`base.en` model, CPU `int8` quantization). |
 | **Audio Processing** | Python `wave`, `numpy` | Native standard-library waveform parsing, RMS energy calculation, and acoustic signal feature extraction. |
 | **Computer Vision** | `mediapipe`, `opencv-python`, `av` | MediaPipe Face Landmarker task model with OpenCV fallback. Objective head-pose, gaze, and framing analysis. |
 | **Authentication** | `bcrypt`, `itsdangerous` | Self-managed authentication: bcrypt password hashing (min 8 chars), stateless signed HTTP-only cookies. |
-| **Hosting & OS** | Microsoft Azure VM (Standard_B1s) | Ubuntu 24.04 LTS in Korea Central region (`interview-simulator-vm-korea`). 2 GB persistent swapfile. |
+| **Hosting & OS** | Microsoft Azure VM (Standard_B2ats_v2) | Ubuntu 24.04 LTS in Korea Central region (`interview-simulator-vm-korea`). 2 GB persistent swapfile. |
 | **Web Server** | Nginx | Reverse proxy handling TLS termination, client buffer management (50MB uploads), and HTTP/1.1 proxying. |
 | **Process Management**| systemd | `interview-simulator.service` with auto-restart, unprivileged execution (`azureuser`), and sandboxing (`PrivateTmp=true`, `ProtectSystem=full`). |
 | **Disaster Recovery** | `sqlite3.backup`, Azure Blob Storage | `scripts/backup_db.py`, `interview-backup.timer`, System-Assigned Managed Identity via `azure-identity`. |
@@ -210,7 +210,7 @@ The application is configured through environment variables or a local `.env` fi
 ## Local Development Setup
 
 ### Prerequisites
-- Python 3.10 or higher (Python 3.11, 3.12, 3.13, and 3.14 supported)
+- Python 3.10–3.12 (validated for MediaPipe, faster-whisper, and PyAV binary compatibility)
 - Git
 - Modern web browser (Chrome, Edge, Firefox, or Safari) with microphone and camera permissions for audio/video features
 - *(Node.js, npm, or frontend bundlers are NOT required)*
@@ -365,7 +365,7 @@ The application is deployed on a dedicated Azure Linux VM in the Korea Central r
 
 ### Production Runtime Invariants
 1. **Single Uvicorn Worker**: The application executes under Uvicorn with `--workers 1`. This enforces the process-local `threading.Semaphore(1)` inference gate in `backend/inference_gate.py`, ensuring that heavy ML operations (Whisper STT and MediaPipe) execute sequentially.
-2. **Swapfile Protection**: A 2 GB persistent swapfile (`/swapfile`) with `vm.swappiness=10` ensures memory stability on constrained 1 GB RAM virtual machine sizes (e.g., Azure Standard_B1s).
+2. **Swapfile Protection**: A 2 GB persistent swapfile (`/swapfile`) with `vm.swappiness=10` ensures memory stability on the production virtual machine host (Azure Standard_B2ats_v2).
 3. **Database Isolation & WAL Mode**: Production persistence resides at `/data/interview.db` using SQLite's Write-Ahead Logging mode. This enables concurrent readers while a single writer commits, preventing thread contention.
 4. **Automated Online Backups**: Automated nightly backups run via systemd timer (`interview-backup.timer`) at 02:00 UTC. The backup utility (`scripts/backup_db.py`):
    - Uses the non-blocking `sqlite3.Connection.backup()` API.
