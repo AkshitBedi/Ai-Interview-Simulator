@@ -1145,7 +1145,8 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
-      max-width: 900px;
+      width: 100%;
+      max-width: none;
     }
 
     .setup-header-block {
@@ -1290,45 +1291,88 @@
     }
 
     /* ==========================================================================
-       ACTIVE INTERVIEW WORKSPACE
+       ACTIVE INTERVIEW WORKSPACE (PHASE 18C)
        ========================================================================== */
-    .card {
+    #session-active.session-question-card {
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
-      padding: 24px;
-      margin-bottom: 20px;
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      width: 100%;
+      max-width: none;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
     }
 
+    /* Top Session Meta Bar */
     .session-meta-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-bottom: 16px;
       border-bottom: 1px solid var(--border-subtle);
-      padding-bottom: 12px;
+    }
+
+    #session-progress-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    #session-progress-text strong {
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
     }
 
     .badge {
       display: inline-flex;
       align-items: center;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
       border-radius: var(--radius-sm);
-      border: 1px solid var(--border-subtle);
-      background: var(--bg-card-alt);
-      color: var(--text-primary);
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      border: 1px solid transparent;
     }
 
+    .badge-adaptive {
+      background: rgba(168, 85, 247, 0.12);
+      border-color: rgba(168, 85, 247, 0.35);
+      color: #c084fc;
+    }
+
+    .badge-bank {
+      background: rgba(59, 130, 246, 0.12);
+      border-color: rgba(59, 130, 246, 0.35);
+      color: #60a5fa;
+    }
+
+    .badge-followup {
+      background: rgba(234, 179, 8, 0.12);
+      border-color: rgba(234, 179, 8, 0.4);
+      color: #facc15;
+    }
+
+    /* Interviewer Dialogue Panel */
     .interviewer-bubble {
-      background: var(--bg-card-alt);
-      border: 1px solid var(--border-subtle);
+      background: rgba(59, 130, 246, 0.05);
+      border: 1px solid rgba(59, 130, 246, 0.22);
+      border-left: 3px solid #3b82f6;
       border-radius: var(--radius-md);
-      padding: 14px 16px;
-      margin-bottom: 18px;
+      padding: 14px 18px;
       display: flex;
-      gap: 12px;
+      gap: 14px;
       align-items: flex-start;
     }
 
@@ -1336,110 +1380,461 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      font-size: 1.1rem;
-      gap: 2px;
+      gap: 3px;
       flex-shrink: 0;
     }
 
+    .avatar-icon {
+      font-size: 20px;
+      line-height: 1;
+    }
+
     .interviewer-label {
-      font-size: 0.6875rem;
-      font-weight: 600;
-      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 700;
+      color: #60a5fa;
       text-transform: uppercase;
+      letter-spacing: 0.8px;
     }
 
     .interviewer-speech {
-      color: var(--text-primary);
+      color: #e2e8f0;
       font-size: 14px;
-      line-height: 1.5;
+      line-height: 1.55;
+    }
+
+    /* Question Presentation */
+    .question-presentation-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .question-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--primary-gold);
     }
 
     #session-question-title {
-      font-size: 1.25rem;
+      font-size: 20px;
       font-weight: 700;
-      color: var(--text-primary);
+      color: #ffffff;
       line-height: 1.45;
-      margin-bottom: 18px;
-      letter-spacing: -0.2px;
+      letter-spacing: -0.3px;
+      margin: 0;
     }
 
-    .answer-box-container {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
+    /* Answer Mode Segmented Controls */
     .answer-mode-toggle {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 4px;
+      display: inline-flex;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 4px;
+      gap: 4px;
+      width: fit-content;
+      max-width: 100%;
     }
 
-    .mode-btn {
-      background: var(--bg-card-alt);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-sm);
+    .mode-pill {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
       color: var(--text-secondary);
       font-size: 13px;
-      font-weight: 500;
-      padding: 6px 14px;
-      cursor: pointer;
-      transition: background-color 0.15s, border-color 0.15s, color 0.15s;
-    }
-    .mode-btn.active {
-      background: rgba(234, 179, 8, 0.08);
-      border-color: var(--primary-gold);
-      color: var(--primary-gold);
       font-weight: 600;
-    }
-
-    .answer-textarea {
-      width: 100%;
-      min-height: 160px;
-      background: var(--bg-input);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 14px 16px;
-      color: #ffffff;
-      font-size: 14px;
-      line-height: 1.6;
-      font-family: var(--font-sans);
-      outline: none;
-      resize: vertical;
-    }
-    .answer-textarea:focus {
-      border-color: var(--primary-gold);
-    }
-
-    .answer-bottom-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .char-count-label {
-      font-size: 12px;
-      color: var(--text-secondary);
-      font-family: var(--font-mono);
-    }
-
-    .btn-submit-answer {
-      background: var(--primary-gold);
-      border: 1px solid var(--primary-gold);
-      border-radius: 8px;
-      color: #000000;
-      font-size: 14px;
-      font-weight: 700;
-      padding: 10px 22px;
+      padding: 8px 16px;
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      cursor: pointer;
-      transition: background-color 0.15s;
+      min-height: 36px;
+      transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+      user-select: none;
     }
-    .btn-submit-answer:hover {
+
+    .mode-pill:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .mode-pill.active {
+      background: var(--bg-card-alt);
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Text Answer Workspace */
+    #session-text-input-area {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .answer-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .answer-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-secondary);
+    }
+
+    .answer-char-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    #session-answer-input {
+      width: 100%;
+      min-height: 260px;
+      background-color: #18181b;
+      color: #f4f4f5;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      font-size: 15px;
+      line-height: 1.6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      outline: none;
+      resize: vertical;
+      box-sizing: border-box;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    #session-answer-input::placeholder {
+      color: #71717a;
+      font-size: 14px;
+    }
+
+    #session-answer-input:focus {
+      border-color: var(--primary-gold);
+      box-shadow: 0 0 0 3px rgba(255, 161, 22, 0.18);
+    }
+
+    .button-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    #session-submit-button {
+      min-height: 44px;
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 700;
+      background: var(--primary-gold);
+      color: #000000;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(255, 161, 22, 0.25);
+      transition: background-color 0.15s, box-shadow 0.15s, transform 0.1s;
+    }
+
+    #session-submit-button:hover:not(:disabled) {
       background: var(--gold-hover);
-      border-color: var(--gold-hover);
+      box-shadow: 0 4px 14px rgba(255, 161, 22, 0.4);
+      transform: translateY(-1px);
+    }
+
+    #session-submit-button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    #session-submit-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Voice Mode Workspace */
+    #session-voice-input-area {
+      width: 100%;
+    }
+
+    .audio-recorder-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Video Mode Workspace (2-Column Desktop Grid) */
+    #session-video-input-area {
+      width: 100%;
+    }
+
+    .video-recorder-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(340px, 1fr);
+      gap: 24px;
+      align-items: start;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 22px 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .video-recorder-panel {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .video-controls-side {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .video-camera-side {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    /* Camera Status Bar */
+    .camera-status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+    }
+
+    .camera-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .camera-badge.ok {
+      color: #22c55e;
+    }
+
+    #camera-framing-guide-text {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    /* Camera 16:9 Preview with Pixel-Perfect Canvas Overlay */
+    .camera-preview-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #090a0f;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #camera-live-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    #camera-overlay-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    /* Primary Interactive Recording Buttons */
+    .recorder-btn {
+      min-height: 44px;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background-color 0.15s, box-shadow 0.15s, transform 0.1s;
+    }
+
+    .recorder-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .recorder-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .recorder-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-record {
+      background: #dc2626;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+    }
+
+    .btn-record:hover:not(:disabled) {
+      background: #ef4444;
+      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45);
+    }
+
+    .btn-stop {
+      background: #374151;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-stop:hover:not(:disabled) {
+      background: #4b5563;
+    }
+
+    #btn-submit-audio,
+    #btn-submit-video {
+      background: var(--primary-gold) !important;
+      color: #000000 !important;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(255, 161, 22, 0.25);
+    }
+
+    #btn-submit-audio:hover:not(:disabled),
+    #btn-submit-video:hover:not(:disabled) {
+      background: var(--gold-hover) !important;
+      box-shadow: 0 4px 14px rgba(255, 161, 22, 0.4);
+    }
+
+    #btn-rerecord,
+    #btn-rerecord-video {
+      background: #27272a !important;
+      color: #e4e4e7 !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    }
+
+    #btn-rerecord:hover:not(:disabled),
+    #btn-rerecord-video:hover:not(:disabled) {
+      background: #3f3f46 !important;
+    }
+
+    /* Live Recording Indicator & Pulse Animation */
+    .recording-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      background: rgba(220, 38, 38, 0.1);
+      border: 1px solid rgba(220, 38, 38, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      width: fit-content;
+    }
+
+    .recording-dot {
+      width: 10px;
+      height: 10px;
+      background-color: #ef4444;
+      border-radius: 50%;
+      animation: pulse-recording 1.2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-recording {
+      0% { transform: scale(0.9); opacity: 0.6; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.6; }
+    }
+
+    .recording-timer {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      color: #fca5a5;
+      letter-spacing: 0.5px;
+    }
+
+    #session-video-playback {
+      width: 100%;
+      max-width: 480px;
+      aspect-ratio: 16 / 9;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #000;
+      display: block;
+    }
+
+    /* Responsive Breakpoints for Active Interview */
+    @media (max-width: 768px) {
+      #session-active.session-question-card {
+        padding: 18px 16px;
+      }
+      .answer-mode-toggle {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      .mode-pill {
+        width: 100%;
+        justify-content: center;
+      }
+      .button-row {
+        justify-content: stretch;
+      }
+      #session-submit-button {
+        width: 100%;
+      }
+      #btn-submit-audio,
+      #btn-rerecord,
+      #btn-submit-video,
+      #btn-rerecord-video {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #session-question-title {
+        font-size: 17px;
+      }
+      #session-answer-input {
+        min-height: 200px;
+        padding: 12px 14px;
+        font-size: 14px;
+      }
     }
 
     /* Modals */
@@ -1455,29 +1850,152 @@
       padding: 20px;
     }
 
-    .modal-box {
+    .modal-box,
+    .modal-dialog {
       background: var(--bg-surface);
       border: 1px solid var(--border-elevated);
       border-radius: var(--radius-lg);
-      padding: 26px;
+      padding: 24px;
       max-width: 480px;
       width: 100%;
       position: relative;
+      box-sizing: border-box;
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      position: relative;
+    }
+
+    .modal-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0;
     }
 
     .modal-close-btn {
       position: absolute;
-      top: 18px;
-      right: 18px;
+      top: 14px;
+      right: 14px;
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       background: transparent;
       border: none;
+      border-radius: 6px;
       color: var(--text-secondary);
       font-size: 20px;
       cursor: pointer;
       line-height: 1;
+      padding: 0;
+      transition: background-color 0.15s, color 0.15s;
     }
+
     .modal-close-btn:hover {
       color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .modal-close-btn:focus-visible {
+      outline: 2px solid var(--primary-gold);
+      outline-offset: 2px;
+    }
+
+    /* Auth Modal Specific Controls */
+    #auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    #auth-form .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    #auth-form label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-secondary);
+    }
+
+    #auth-form input[type="email"],
+    #auth-form input[type="password"],
+    #auth-form input[type="text"] {
+      width: 100%;
+      height: 44px;
+      padding: 10px 12px;
+      background-color: #18181b;
+      color: #f4f4f5;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    #auth-form input::placeholder {
+      color: #71717a;
+      font-size: 14px;
+    }
+
+    #auth-form input:focus {
+      background-color: #18181b;
+      color: #f4f4f5;
+      border-color: var(--primary-gold);
+      box-shadow: 0 0 0 3px rgba(255, 161, 22, 0.18);
+    }
+
+    #auth-submit-btn {
+      width: 100%;
+      height: 44px;
+      min-height: 44px;
+      padding: 12px 20px;
+      background: var(--primary-gold);
+      color: #000000;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(255, 161, 22, 0.25);
+      transition: background-color 0.15s, box-shadow 0.15s;
+      margin-top: 4px;
+    }
+
+    #auth-submit-btn:hover {
+      background: var(--gold-hover);
+      box-shadow: 0 4px 14px rgba(255, 161, 22, 0.4);
+    }
+
+    #auth-switch-prompt {
+      color: var(--text-secondary);
+    }
+
+    #auth-switch-link {
+      color: var(--primary-gold);
+      font-weight: 600;
+      text-decoration: none;
+      margin-left: 4px;
+    }
+
+    #auth-switch-link:hover {
+      text-decoration: underline;
     }
 
     /* Responsive Breakpoints */
@@ -1617,8 +2135,8 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
-      max-width: 1200px;
       width: 100%;
+      max-width: none;
     }
 
     .setup-header-block {
@@ -1649,15 +2167,16 @@
       line-height: 1.4;
     }
 
-    /* 2-Column Responsive Layout */
+    /* 2-Column Responsive Layout (70% Left / 30% Right on Desktop) */
     .setup-layout-grid {
       display: grid;
-      grid-template-columns: 1fr 340px;
-      gap: 20px;
+      grid-template-columns: minmax(0, 7fr) minmax(320px, 3fr);
+      gap: 24px;
       align-items: start;
+      width: 100%;
     }
 
-    @media (max-width: 960px) {
+    @media (max-width: 1024px) {
       .setup-layout-grid {
         grid-template-columns: 1fr;
       }
@@ -1667,12 +2186,14 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
+      min-width: 0;
     }
 
     .setup-col-side {
       display: flex;
       flex-direction: column;
       gap: 16px;
+      min-width: 0;
     }
 
     /* Config Cards & Groups */
@@ -1936,13 +2457,22 @@
     /* Start Button & Spinner */
     .start-interview-cta {
       width: 100%;
-      padding: 14px 20px;
+      padding: 13px 20px;
       font-size: 14px;
       font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 2px 8px rgba(255, 161, 22, 0.2);
+      transition: background-color 0.15s, transform 0.1s, box-shadow 0.15s;
+    }
+    .start-interview-cta:hover {
+      box-shadow: 0 4px 14px rgba(255, 161, 22, 0.35);
+    }
+    .start-interview-cta:active {
+      transform: translateY(1px);
     }
 
     .btn-spinner {
@@ -1957,6 +2487,525 @@
 
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    /* ==========================================================================
+       PHASE 18C: SINGLE QUESTION PRACTICE WORKSPACE (LeetCode Dark Theme)
+       ========================================================================== */
+    #practice-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .practice-header-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-bottom: 4px;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .practice-badge-tag {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--primary-gold);
+    }
+
+    .practice-main-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.4px;
+      line-height: 1.3;
+      margin: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+
+    .practice-main-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      margin: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+
+    /* Configure Filter Card */
+    .practice-config-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .practice-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .practice-card-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .practice-filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .practice-field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .practice-label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    .practice-select-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    .practice-select {
+      width: 100%;
+      height: 44px;
+      background: #18181b;
+      color: #f4f4f5;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      padding: 10px 38px 10px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238c8c9a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 16px;
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .practice-select:focus {
+      border-color: var(--primary-gold);
+      box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.25);
+    }
+
+    .practice-select option {
+      background-color: #18181b;
+      color: #f4f4f5;
+      padding: 8px;
+    }
+
+    .practice-cta-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 4px;
+    }
+
+    .btn-practice-primary {
+      min-height: 44px;
+      height: 44px;
+      padding: 10px 24px;
+      background: var(--primary-gold);
+      color: #000000;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(255, 161, 22, 0.25);
+      transition: background-color 0.15s, transform 0.1s, box-shadow 0.15s;
+    }
+
+    .btn-practice-primary:hover:not(:disabled) {
+      background: var(--gold-hover);
+      box-shadow: 0 4px 14px rgba(255, 161, 22, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-practice-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-practice-primary:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .practice-btn-arrow {
+      font-size: 16px;
+      transition: transform 0.15s;
+    }
+
+    .btn-practice-primary:hover:not(:disabled) .practice-btn-arrow {
+      transform: translateX(3px);
+    }
+
+    /* Empty State Card */
+    .practice-empty-card {
+      background: var(--bg-card);
+      border: 1px dashed var(--border-elevated);
+      border-radius: var(--radius-lg);
+      padding: 48px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 12px;
+    }
+
+    .practice-empty-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(234, 179, 8, 0.08);
+      color: var(--primary-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px;
+    }
+
+    .practice-empty-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0;
+    }
+
+    .practice-empty-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      max-width: 460px;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    #practice-container:has(#question-box:not(.hidden)) #practice-empty-state {
+      display: none !important;
+    }
+
+    /* Question Display Card */
+    .practice-question-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 26px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .practice-meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      width: 100%;
+      margin: 0;
+    }
+
+    .practice-meta-badges {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .practice-meta-badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .practice-meta-badge.practice-meta-diff {
+      background: rgba(234, 179, 8, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(234, 179, 8, 0.3);
+      text-transform: capitalize;
+    }
+
+    .practice-meta-dot {
+      color: var(--text-muted);
+    }
+
+    .practice-question-title {
+      font-size: 19px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.45;
+      margin: 0;
+      letter-spacing: -0.2px;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+
+    /* Technical Answer Editor */
+    .practice-editor-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .practice-editor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .practice-editor-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .practice-answer-textarea {
+      width: 100%;
+      min-height: 220px;
+      background: #18181b;
+      color: #f4f4f5;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      padding: 16px 18px;
+      font-size: 14px;
+      font-family: var(--font-mono, monospace);
+      line-height: 1.6;
+      outline: none;
+      resize: vertical;
+      box-sizing: border-box;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .practice-answer-textarea:focus {
+      border-color: var(--primary-gold);
+      box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.25);
+    }
+
+    .practice-answer-textarea::placeholder {
+      color: #71717a;
+    }
+
+    .practice-actions-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-practice-secondary {
+      min-height: 44px;
+      height: 44px;
+      padding: 10px 20px;
+      background: #27272a;
+      color: #e4e4e7;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .btn-practice-secondary:hover:not(:disabled) {
+      background: #3f3f46;
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-practice-secondary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* AI Evaluation & Feedback Card */
+    .practice-feedback-card,
+    .practice-answers-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .practice-feedback-title,
+    .practice-answers-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0;
+    }
+
+    .practice-score-container {
+      margin: 4px 0;
+    }
+
+    .feedback-score-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(234, 179, 8, 0.15);
+      color: var(--primary-gold);
+      border: 1px solid rgba(234, 179, 8, 0.35);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+    }
+
+    .practice-feedback-summary {
+      font-size: 15px;
+      color: #f4f4f5;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .practice-feedback-details {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .practice-feedback-details .feedback-section {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .practice-feedback-details .feedback-section h3 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary-gold);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin: 0 0 6px 0;
+    }
+
+    .practice-feedback-details .feedback-section p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .practice-feedback-details .feedback-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .practice-feedback-details .feedback-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      padding-top: 4px;
+    }
+
+    .practice-answers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .practice-answers-list .answer-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #e4e4e7;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 768px) {
+      .practice-filters-grid {
+        grid-template-columns: 1fr;
+      }
+      .practice-config-card,
+      .practice-question-card,
+      .practice-feedback-card,
+      .practice-answers-card {
+        padding: 20px 18px;
+      }
+      .btn-practice-primary,
+      .btn-practice-secondary {
+        width: 100%;
+      }
+      .practice-actions-row {
+        flex-direction: column;
+        width: 100%;
+      }
+      .practice-question-title {
+        font-size: 18px;
+      }
+      .practice-main-title {
+        font-size: 19px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .practice-config-card,
+      .practice-question-card,
+      .practice-feedback-card,
+      .practice-answers-card {
+        padding: 16px 14px;
+      }
+      .practice-main-title {
+        font-size: 17px;
+      }
+      .practice-question-title {
+        font-size: 16px;
+      }
+      .practice-answer-textarea {
+        padding: 12px 14px;
+        min-height: 200px;
+      }
     }
 
   </style>
@@ -2502,7 +3551,8 @@
             </div>
           </div>
         </section>
-      <section id="session-active" class="card session-question-card hidden">
+      <section id="session-active" class="card session-question-card hidden" data-answer-mode="text">
+        <!-- 1. Top Session Progress & Strategy Row -->
         <div class="session-meta-row">
           <div>
             <span id="session-progress-text"><strong>Session #1</strong> &middot; Turn 1 of 5</span>
@@ -2513,7 +3563,7 @@
           </div>
         </div>
 
-        <!-- Phase 8: Conversational Interviewer Bubble -->
+        <!-- 2. Phase 8: Conversational Interviewer Bubble -->
         <div id="session-interviewer-bubble" class="interviewer-bubble hidden">
           <div class="interviewer-avatar">
             <span class="avatar-icon">🧑‍💼</span>
@@ -2522,18 +3572,25 @@
           <div id="session-interviewer-text" class="interviewer-speech"></div>
         </div>
 
-        <h2 id="session-question-title"></h2>
-
-        <!-- Answer Mode Switcher -->
-        <div class="answer-mode-toggle" role="group" aria-label="Answer Mode">
-          <button type="button" class="mode-pill active" id="btn-mode-text">💬 Type Answer</button>
-          <button type="button" class="mode-pill" id="btn-mode-voice">🎙️ Voice Only</button>
-          <button type="button" class="mode-pill" id="btn-mode-video">📹 Video + Voice (Optional)</button>
+        <!-- 3. Question Presentation Block -->
+        <div class="question-presentation-block">
+          <div class="question-eyebrow">QUESTION</div>
+          <h2 id="session-question-title"></h2>
         </div>
 
-        <!-- Text Answer Area -->
+        <!-- 4. Answer Mode Switcher -->
+        <div class="answer-mode-toggle" role="group" aria-label="Answer Mode">
+          <button type="button" class="mode-pill active" id="btn-mode-text" aria-pressed="true">💬 Type Answer</button>
+          <button type="button" class="mode-pill" id="btn-mode-voice" aria-pressed="false">🎙️ Voice Only</button>
+          <button type="button" class="mode-pill" id="btn-mode-video" aria-pressed="false">📹 Video + Voice (Optional)</button>
+        </div>
+
+        <!-- 5A. Text Answer Workspace -->
         <div id="session-text-input-area">
-          <label for="session-answer-input">Your Answer</label>
+          <div class="answer-header-row">
+            <label for="session-answer-input" class="answer-section-label">YOUR ANSWER</label>
+            <span class="answer-char-hint" id="answer-char-counter">0 chars (min 10)</span>
+          </div>
           <textarea
             id="session-answer-input"
             minlength="10"
@@ -2547,10 +3604,10 @@
           </div>
         </div>
 
-        <!-- Voice Answer Area -->
+        <!-- 5B. Voice Answer Workspace -->
         <div id="session-voice-input-area" class="hidden">
           <div class="audio-recorder-panel">
-            <p style="margin-top: 0; color: var(--muted); font-size: 0.95rem;">
+            <p style="margin-top: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5;">
               Click <strong>Start Recording</strong>, speak your answer into your microphone, then click <strong>Stop Recording</strong>.
             </p>
 
@@ -2572,66 +3629,74 @@
 
             <div id="recorder-preview-controls" class="hidden">
               <div class="audio-preview-container">
-                <audio id="session-audio-preview" controls></audio>
-                <div class="button-row" style="margin-top: 10px;">
-                  <button type="button" id="btn-submit-audio" class="recorder-btn" style="background: var(--blue);">
+                <audio id="session-audio-preview" controls style="width: 100%; max-width: 440px; margin-bottom: 8px;"></audio>
+                <div class="button-row" style="margin-top: 10px; justify-content: flex-start;">
+                  <button type="button" id="btn-submit-audio" class="recorder-btn">
                     🚀 Submit Voice Answer & Advance
                   </button>
-                  <button type="button" id="btn-rerecord" class="recorder-btn" style="background: #94a3b8;">
+                  <button type="button" id="btn-rerecord" class="recorder-btn">
                     🔄 Discard & Re-record
                   </button>
                 </div>
               </div>
             </div>
 
-            <p id="audio-recording-status" style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0;"></p>
+            <p id="audio-recording-status" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0;"></p>
           </div>
         </div>
 
-        <!-- Phase 5: Video + Voice Answer Area -->
+        <!-- 5C. Video + Voice Answer Workspace (2-Column Desktop Grid) -->
         <div id="session-video-input-area" class="hidden">
           <div class="video-recorder-panel">
-            <div class="camera-status-bar">
-              <span id="camera-presence-indicator" class="camera-badge">📷 Camera Inactive</span>
-              <span id="camera-framing-guide-text">Align face within the framing guide</span>
-            </div>
-
-            <div class="camera-preview-wrapper" id="camera-preview-box">
-              <video id="camera-live-video" autoplay playsinline muted></video>
-              <canvas id="camera-overlay-canvas" class="camera-overlay-canvas" width="480" height="360"></canvas>
-            </div>
-
-            <div id="video-recorder-idle-controls">
-              <button type="button" id="btn-video-record-start" class="recorder-btn btn-record">
-                🔴 Start Video Recording
-              </button>
-            </div>
-
-            <div id="video-recorder-live-controls" class="hidden">
-              <div class="recording-live">
-                <div class="recording-dot"></div>
-                <span class="recording-timer" id="video-recording-timer-display">00:00</span>
+            <div class="video-camera-side">
+              <div class="camera-status-bar">
+                <span id="camera-presence-indicator" class="camera-badge">📷 Camera Inactive</span>
+                <span id="camera-framing-guide-text">Align face within the framing guide</span>
               </div>
-              <button type="button" id="btn-video-record-stop" class="recorder-btn btn-stop">
-                ⏹️ Stop Recording
-              </button>
+
+              <div class="camera-preview-wrapper" id="camera-preview-box">
+                <video id="camera-live-video" autoplay playsinline muted></video>
+                <canvas id="camera-overlay-canvas" class="camera-overlay-canvas" width="640" height="360"></canvas>
+              </div>
             </div>
 
-            <div id="video-recorder-preview-controls" class="hidden">
-              <div class="audio-preview-container">
-                <video id="session-video-playback" controls playsinline style="max-width: 480px; width: 100%; border-radius: 8px;"></video>
-                <div class="button-row" style="margin-top: 10px;">
-                  <button type="button" id="btn-submit-video" class="recorder-btn" style="background: var(--blue);">
-                    🚀 Submit Video Answer & Advance
-                  </button>
-                  <button type="button" id="btn-rerecord-video" class="recorder-btn" style="background: #94a3b8;">
-                    🔄 Discard & Retake
-                  </button>
+            <div class="video-controls-side">
+              <p style="margin-top: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5;">
+                Align your face within the framing guide. Click <strong>Start Video Recording</strong> to record your response.
+              </p>
+
+              <div id="video-recorder-idle-controls">
+                <button type="button" id="btn-video-record-start" class="recorder-btn btn-record">
+                  🔴 Start Video Recording
+                </button>
+              </div>
+
+              <div id="video-recorder-live-controls" class="hidden">
+                <div class="recording-live">
+                  <div class="recording-dot"></div>
+                  <span class="recording-timer" id="video-recording-timer-display">00:00</span>
+                </div>
+                <button type="button" id="btn-video-record-stop" class="recorder-btn btn-stop">
+                  ⏹️ Stop Recording
+                </button>
+              </div>
+
+              <div id="video-recorder-preview-controls" class="hidden">
+                <div class="audio-preview-container">
+                  <video id="session-video-playback" controls playsinline></video>
+                  <div class="button-row" style="margin-top: 12px; flex-direction: column; align-items: stretch;">
+                    <button type="button" id="btn-submit-video" class="recorder-btn">
+                      🚀 Submit Video Answer & Advance
+                    </button>
+                    <button type="button" id="btn-rerecord-video" class="recorder-btn">
+                      🔄 Discard & Retake
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <p id="video-recording-status" style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0;"></p>
+              <p id="video-recording-status" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0;"></p>
+            </div>
           </div>
         </div>
       </section>
@@ -2793,65 +3858,119 @@
 
         <!-- VIEW 3: Single Question Practice (Single Practice Container and all contents) -->
         <div id="practice-container" class="hidden">
-      <section class="filters" aria-label="Question filters">
-        <div class="field">
-          <label for="category-filter">Category</label>
-          <select id="category-filter">
-            <option value="">Any category</option>
-          </select>
+          <!-- Page Header -->
+          <div class="practice-header-block">
+            <div class="practice-badge-tag">SINGLE QUESTION PRACTICE</div>
+            <h1 class="practice-main-title">Practice one focused interview question with immediate feedback.</h1>
+            <p class="practice-main-desc">Select your desired domain and difficulty to benchmark your technical responses with instant AI evaluation.</p>
+          </div>
+
+          <!-- Configure Card -->
+          <section class="filters practice-config-card" aria-label="Question filters">
+            <div class="practice-card-header">
+              <span class="practice-card-eyebrow">CONFIGURE</span>
+            </div>
+            <div class="practice-filters-grid">
+              <div class="field practice-field">
+                <label class="practice-label" for="category-filter">Category</label>
+                <div class="practice-select-wrap">
+                  <select id="category-filter" class="practice-select">
+                    <option value="">Any category</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field practice-field">
+                <label class="practice-label" for="difficulty-filter">Difficulty</label>
+                <div class="practice-select-wrap">
+                  <select id="difficulty-filter" class="practice-select">
+                    <option value="">Any difficulty</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="practice-cta-row">
+              <button type="button" id="new-question-button" class="btn-practice-primary">
+                <span>Get Random Question</span>
+                <span class="practice-btn-arrow">→</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- Empty State Banner (Shown when no question is loaded) -->
+          <div id="practice-empty-state" class="practice-empty-card">
+            <div class="practice-empty-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            <h3 class="practice-empty-title">Ready to Practice</h3>
+            <p class="practice-empty-desc">Choose a category and difficulty, then generate a question.</p>
+          </div>
+
+          <!-- Question Presentation Card -->
+          <section id="question-box" class="card practice-question-card hidden">
+            <div class="practice-card-header">
+              <div class="practice-meta-row">
+                <span class="practice-card-eyebrow">QUESTION</span>
+                <div class="practice-meta-badges">
+                  <span class="practice-meta-badge"><strong id="category"></strong></span>
+                  <span class="practice-meta-dot">&middot;</span>
+                  <span class="practice-meta-badge practice-meta-diff"><strong id="difficulty"></strong></span>
+                </div>
+              </div>
+            </div>
+
+            <h2 id="question" class="practice-question-title"></h2>
+
+            <div class="practice-editor-wrap">
+              <div class="practice-editor-header">
+                <label class="practice-label" for="answer">YOUR ANSWER</label>
+                <span class="practice-editor-hint">Technical response (min 10 chars)</span>
+              </div>
+              <textarea
+                id="answer"
+                class="practice-answer-textarea"
+                minlength="10"
+                placeholder="Type your technical response here..."
+              ></textarea>
+            </div>
+
+            <div class="button-row practice-actions-row">
+              <button type="button" id="submit-answer-button" class="btn-practice-primary" disabled>
+                <span>Submit Answer</span>
+                <span class="practice-btn-arrow">→</span>
+              </button>
+
+              <button type="button" id="view-answers-button" class="btn-practice-secondary" disabled>
+                View Previous Answers
+              </button>
+            </div>
+          </section>
+
+          <!-- AI Evaluation & Feedback -->
+          <section id="feedback-box" class="card practice-feedback-card hidden">
+            <div class="practice-card-header">
+              <span class="practice-card-eyebrow">AI EVALUATION</span>
+            </div>
+            <h2 class="practice-feedback-title">AI Evaluation & Feedback</h2>
+            <div id="feedback-score-container" class="practice-score-container"></div>
+            <p id="feedback" class="practice-feedback-summary"></p>
+            <div id="feedback-details" class="practice-feedback-details"></div>
+          </section>
+
+          <!-- Previous Answers -->
+          <section id="previous-answers-box" class="card practice-answers-card hidden">
+            <div class="practice-card-header">
+              <span class="practice-card-eyebrow">HISTORY</span>
+            </div>
+            <h2 class="practice-answers-title">Previous Answers</h2>
+            <div id="previous-answers" class="practice-answers-list"></div>
+          </section>
         </div>
-
-        <div class="field">
-          <label for="difficulty-filter">Difficulty</label>
-          <select id="difficulty-filter">
-            <option value="">Any difficulty</option>
-          </select>
-        </div>
-
-        <button type="button" id="new-question-button">
-          Get Random Question
-        </button>
-      </section>
-
-      <section id="question-box" class="card hidden">
-        <p>
-          <strong id="category"></strong>
-          &middot;
-          <strong id="difficulty"></strong>
-        </p>
-
-        <h2 id="question"></h2>
-
-        <label for="answer">Your answer</label>
-        <textarea
-          id="answer"
-          minlength="10"
-          placeholder="Write your interview answer here..."
-        ></textarea>
-
-        <div class="button-row">
-          <button type="button" id="submit-answer-button" disabled>
-            Submit Answer
-          </button>
-
-          <button type="button" id="view-answers-button" disabled>
-            View Previous Answers
-          </button>
-        </div>
-      </section>
-
-      <section id="feedback-box" class="card hidden">
-        <h2>AI Evaluation & Feedback</h2>
-        <div id="feedback-score-container"></div>
-        <p id="feedback"></p>
-        <div id="feedback-details"></div>
-      </section>
-
-      <section id="previous-answers-box" class="card hidden">
-        <h2>Previous Answers</h2>
-        <div id="previous-answers"></div>
-      </section>
-    </div>
 
         <!-- VIEW 4: Analytics (Analytics Container and all contents) -->
         <div id="analytics-container" class="hidden">
@@ -3191,21 +4310,21 @@
             <h2 id="auth-modal-title">Sign In</h2>
             <button type="button" class="modal-close-btn" id="auth-modal-close" aria-label="Close modal">&times;</button>
           </div>
-          <div class="modal-body" style="padding: 20px;">
-            <form id="auth-form" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="modal-body">
+            <form id="auth-form" onsubmit="return false;">
               <div class="field">
                 <label for="auth-email">Email Address</label>
-                <input type="email" id="auth-email" placeholder="you@example.com" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 7px; font: inherit;" />
+                <input type="email" id="auth-email" placeholder="you@example.com" required />
               </div>
               <div class="field">
                 <label for="auth-password">Password</label>
-                <input type="password" id="auth-password" placeholder="Minimum 8 characters" minlength="8" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 7px; font: inherit;" />
+                <input type="password" id="auth-password" placeholder="Minimum 8 characters" minlength="8" required />
               </div>
               <div id="auth-error-msg" style="color: var(--error); font-size: 0.88rem; display: none;"></div>
-              <button type="submit" id="auth-submit-btn" class="btn-primary" style="padding: 10px; font-weight: 600; cursor: pointer; margin-top: 4px;">Sign In</button>
+              <button type="submit" id="auth-submit-btn" class="btn-primary">Sign In</button>
               <div style="text-align: center; font-size: 0.88rem; margin-top: 6px;">
                 <span id="auth-switch-prompt">Don't have an account?</span>
-                <a href="#" id="auth-switch-link" style="color: var(--blue); font-weight: 600; text-decoration: none; margin-left: 4px;">Register</a>
+                <a href="#" id="auth-switch-link">Register</a>
               </div>
             </form>
           </div>
@@ -3219,7 +4338,7 @@
             <h2>My Account Interview History</h2>
             <button type="button" class="modal-close-btn" id="account-history-modal-close" aria-label="Close modal">&times;</button>
           </div>
-          <div class="modal-body" id="account-history-modal-body" style="padding: 20px;">
+          <div class="modal-body" id="account-history-modal-body">
             <p style="color: var(--muted); text-align: center;">Loading account interviews...</p>
           </div>
         </div>
@@ -3235,6 +4354,107 @@
 
   <script>
     const API_URL = "";
+
+    // -------------------------------------------------------------
+    // Session State & DOM Element Declarations
+    // -------------------------------------------------------------
+    let activeSessionId = null;
+    let activeTurnNumber = 1;
+    let activeMaxTurns = 5;
+    let activeInterviewerStyle = "professional";
+    let activeSessionSelectedCategories = null;
+    let activeSessionCategory = null;
+    let activeSessionTargetRole = null;
+    let activeSessionExperienceLevel = null;
+    let currentAnswerMode = "text"; // "text", "voice", or "video"
+
+    // Audio & Video Recording State
+    let audioContext = null;
+    let mediaStream = null;
+    let scriptProcessor = null;
+    let audioInputNode = null;
+    let recordedPCMChunks = [];
+    let recordingStartTime = 0;
+    let recordingTimerInterval = null;
+    let recordedWavBlob = null;
+
+    let videoStream = null;
+    let videoMediaRecorder = null;
+    let recordedVideoChunks = [];
+    let recordedVideoBlob = null;
+    let videoRecordingStartTime = 0;
+    let videoRecordingTimerInterval = null;
+
+    // Active Session & Evaluation Elements
+    const sessionActiveCard = document.getElementById("session-active");
+    const sessionProgressText = document.getElementById("session-progress-text");
+    const sessionQuestionTypeBadge = document.getElementById("session-question-type-badge");
+    const sessionQuestionTitle = document.getElementById("session-question-title");
+    const sessionAnswerInput = document.getElementById("session-answer-input");
+    const sessionSubmitButton = document.getElementById("session-submit-button");
+    const sessionEvalCard = document.getElementById("session-evaluation-card");
+    const sessionSummaryCard = document.getElementById("session-summary-card");
+    const startNewSessionButton = document.getElementById("start-new-session-button");
+    const sessionInterviewerBubble = document.getElementById("session-interviewer-bubble");
+    const sessionInterviewerText = document.getElementById("session-interviewer-text");
+
+    // Modality & Recording Elements
+    const btnModeText = document.getElementById("btn-mode-text");
+    const btnModeVoice = document.getElementById("btn-mode-voice");
+    const btnModeVideo = document.getElementById("btn-mode-video");
+    const sessionTextInputArea = document.getElementById("session-text-input-area");
+    const sessionVoiceInputArea = document.getElementById("session-voice-input-area");
+    const sessionVideoInputArea = document.getElementById("session-video-input-area");
+    const btnRecordStart = document.getElementById("btn-record-start");
+    const btnRecordStop = document.getElementById("btn-record-stop");
+    const btnSubmitAudio = document.getElementById("btn-submit-audio");
+    const btnRerecord = document.getElementById("btn-rerecord");
+    const recorderIdleControls = document.getElementById("recorder-idle-controls");
+    const recorderLiveControls = document.getElementById("recorder-live-controls");
+    const recorderPreviewControls = document.getElementById("recorder-preview-controls");
+    const recordingTimerDisplay = document.getElementById("recording-timer-display");
+    const sessionAudioPreview = document.getElementById("session-audio-preview");
+    const audioRecordingStatus = document.getElementById("audio-recording-status");
+    const cameraLiveVideo = document.getElementById("camera-live-video");
+    const cameraOverlayCanvas = document.getElementById("camera-overlay-canvas");
+    const cameraPresenceIndicator = document.getElementById("camera-presence-indicator");
+    const btnVideoRecordStart = document.getElementById("btn-video-record-start");
+    const btnVideoRecordStop = document.getElementById("btn-video-record-stop");
+    const btnSubmitVideo = document.getElementById("btn-submit-video");
+    const btnRerecordVideo = document.getElementById("btn-rerecord-video");
+    const videoRecorderIdleControls = document.getElementById("video-recorder-idle-controls");
+    const videoRecorderLiveControls = document.getElementById("video-recorder-live-controls");
+    const videoRecorderPreviewControls = document.getElementById("video-recorder-preview-controls");
+    const videoRecordingTimerDisplay = document.getElementById("video-recording-timer-display");
+    const sessionVideoPlayback = document.getElementById("session-video-playback");
+    const videoRecordingStatus = document.getElementById("video-recording-status");
+    const sessionNonverbalCard = document.getElementById("session-nonverbal-card");
+    const nonverbalScoreContainer = document.getElementById("nonverbal-score-container");
+    const nonverbalFeedbackText = document.getElementById("nonverbal-feedback-text");
+    const nonverbalMetricsGrid = document.getElementById("nonverbal-metrics-grid");
+    const nonverbalQualityBox = document.getElementById("nonverbal-quality-box");
+
+    // Practice Mode Elements
+    let currentQuestionId = null;
+    const categoryFilter = document.getElementById("category-filter");
+    const difficultyFilter = document.getElementById("difficulty-filter");
+    const sessionCategorySelect = document.getElementById("session-category");
+    const newQuestionButton = document.getElementById("new-question-button");
+    const submitAnswerButton = document.getElementById("submit-answer-button");
+    const viewAnswersButton = document.getElementById("view-answers-button");
+    const questionBox = document.getElementById("question-box");
+    const feedbackBox = document.getElementById("feedback-box");
+    const previousAnswersBox = document.getElementById("previous-answers-box");
+
+    // Analytics Modal Elements
+    const analyticsEmptyState = document.getElementById("analytics-empty-state");
+    const analyticsContent = document.getElementById("analytics-content");
+    const btnAnalyticsPrev = document.getElementById("btn-analytics-prev");
+    const btnAnalyticsNext = document.getElementById("btn-analytics-next");
+    const analyticsReviewModal = document.getElementById("analytics-review-modal");
+    const analyticsModalClose = document.getElementById("analytics-modal-close");
+    let analyticsPageOffset = 0;
+    const analyticsPageLimit = 20;
 
     // Active View Switching
     function switchView(viewName) {
@@ -3269,6 +4489,12 @@
         if (sessionActive) sessionActive.classList.add("hidden");
         const navEl = document.getElementById("nav-new-interview");
         if (navEl) navEl.classList.add("active");
+        const errNotice = document.getElementById("setup-error-notice");
+        if (errNotice) {
+          errNotice.classList.add("hidden");
+          errNotice.textContent = "";
+        }
+        updateConfigSummary();
       } else if (viewName === "practice") {
         if (practiceContainer) practiceContainer.classList.remove("hidden");
         loadPracticeQuestions();
@@ -3644,79 +4870,6 @@
       }
     }
 
-    // Live Configuration Summary Updater
-    function updateConfigSummary() {
-      // 1. Format & Turns
-      const activeModeChip = document.querySelector("#mode-chips .mode-large-chip.active");
-      const isSingle = activeModeChip && activeModeChip.getAttribute("data-mode") === "single";
-      const turnsSelect = document.getElementById("session-turns");
-      const customTurnsInput = document.getElementById("custom-turns-input");
-      const turnsVal = isSingle ? 1 : (parseInt(customTurnsInput && customTurnsInput.value ? customTurnsInput.value : (turnsSelect ? turnsSelect.value : "5"), 10) || 5);
-
-      const sumFormat = document.getElementById("sum-format");
-      if (sumFormat) {
-        sumFormat.textContent = isSingle ? "Single Question (1 turn)" : `Full Mock (${turnsVal} turns)`;
-      }
-
-      // 2. Focus Categories
-      const catAllChip = document.querySelector('#category-chips [data-cat="all"]');
-      const activeCatChips = Array.from(document.querySelectorAll('#category-chips .choice-chip.active')).filter(c => c.getAttribute("data-cat") !== "all");
-      const sumFocus = document.getElementById("sum-focus");
-      if (sumFocus) {
-        if (catAllChip && catAllChip.classList.contains("active")) {
-          sumFocus.textContent = "All Categories";
-        } else if (activeCatChips.length === 1) {
-          sumFocus.textContent = activeCatChips[0].getAttribute("data-cat");
-        } else if (activeCatChips.length > 1) {
-          sumFocus.textContent = activeCatChips.map(c => c.getAttribute("data-cat")).join(" + ");
-        } else {
-          sumFocus.textContent = "All Categories";
-        }
-      }
-
-      // 3. Difficulty
-      const activeDiffChip = document.querySelector("#difficulty-chips .choice-chip.active");
-      const sumDiff = document.getElementById("sum-difficulty");
-      if (sumDiff) {
-        sumDiff.textContent = activeDiffChip ? activeDiffChip.textContent.trim() : "Adaptive";
-      }
-
-      // 4. Experience
-      const activeExpChip = document.querySelector("#exp-chips .choice-chip.active");
-      const sumExp = document.getElementById("sum-experience");
-      if (sumExp) {
-        sumExp.textContent = activeExpChip ? activeExpChip.textContent.trim() : "Mid";
-      }
-
-      // 5. Style
-      const activeStyleChip = document.querySelector("#style-chips .choice-chip.active");
-      const sumStyle = document.getElementById("sum-style");
-      if (sumStyle) {
-        sumStyle.textContent = activeStyleChip ? activeStyleChip.textContent.trim() : "Professional";
-      }
-
-      // 6. Modality
-      const activeModeCard = document.querySelector("#setup-answer-mode-chips .mode-card.active");
-      const sumModality = document.getElementById("sum-modality");
-      if (sumModality && activeModeCard) {
-        const titleEl = activeModeCard.querySelector(".mode-card-title");
-        sumModality.textContent = titleEl ? titleEl.textContent.trim() : "Type Answer";
-      }
-
-      // 7. Target Role
-      const roleInput = document.getElementById("session-target-role");
-      const roleVal = roleInput ? roleInput.value.trim() : "";
-      const roleRow = document.getElementById("sum-role-row");
-      const sumRole = document.getElementById("sum-role");
-      if (roleRow && sumRole) {
-        if (roleVal) {
-          sumRole.textContent = roleVal;
-          roleRow.classList.remove("hidden");
-        } else {
-          roleRow.classList.add("hidden");
-        }
-      }
-    }
 
     function setupChipGroups() {
       // 1. Interview Mode Chips (Full Mock vs Single Question)
@@ -4089,9 +5242,11 @@
         let payloadCategories = null;
 
         if (catAllChip && catAllChip.classList.contains("active")) {
-          // All Categories: category="All", categories=["Python", "Databases", "System Design", "Behavioral"]
+          // All Categories: UI represents all four canonical categories.
+          // Normalized for backend contract: category="All", categories=null.
+          // Backend interview_engine automatically stores category="All" and selected_categories=[all four canonical categories].
           payloadCategory = "All";
-          payloadCategories = ["Python", "Databases", "System Design", "Behavioral"];
+          payloadCategories = null;
         } else if (activeCatChips.length === 1) {
           // Single category: category="Python", categories=["Python"]
           const singleName = getCanonicalCategory(activeCatChips[0].getAttribute("data-cat"));
@@ -4108,7 +5263,7 @@
           }
           if (validSelected.length === 4) {
             payloadCategory = "All";
-            payloadCategories = ["Python", "Databases", "System Design", "Behavioral"];
+            payloadCategories = null;
           } else {
             payloadCategory = null;
             payloadCategories = validSelected;
@@ -4116,7 +5271,7 @@
         } else {
           // Fallback to All Categories
           payloadCategory = "All";
-          payloadCategories = ["Python", "Databases", "System Design", "Behavioral"];
+          payloadCategories = null;
         }
 
         // 3. Difficulty (Adaptive Preset Mapping: NEVER send "adaptive")
@@ -4218,19 +5373,31 @@
 
     function setAnswerMode(mode) {
       currentAnswerMode = mode;
-      btnModeText.classList.toggle("active", mode === "text");
-      btnModeVoice.classList.toggle("active", mode === "voice");
-      btnModeVideo.classList.toggle("active", mode === "video");
+      if (sessionActiveCard) {
+        sessionActiveCard.setAttribute("data-answer-mode", mode);
+      }
+      if (btnModeText) {
+        btnModeText.classList.toggle("active", mode === "text");
+        btnModeText.setAttribute("aria-pressed", mode === "text" ? "true" : "false");
+      }
+      if (btnModeVoice) {
+        btnModeVoice.classList.toggle("active", mode === "voice");
+        btnModeVoice.setAttribute("aria-pressed", mode === "voice" ? "true" : "false");
+      }
+      if (btnModeVideo) {
+        btnModeVideo.classList.toggle("active", mode === "video");
+        btnModeVideo.setAttribute("aria-pressed", mode === "video" ? "true" : "false");
+      }
 
-      sessionTextInputArea.classList.toggle("hidden", mode !== "text");
-      sessionVoiceInputArea.classList.toggle("hidden", mode !== "voice");
-      sessionVideoInputArea.classList.toggle("hidden", mode !== "video");
+      if (sessionTextInputArea) sessionTextInputArea.classList.toggle("hidden", mode !== "text");
+      if (sessionVoiceInputArea) sessionVoiceInputArea.classList.toggle("hidden", mode !== "voice");
+      if (sessionVideoInputArea) sessionVideoInputArea.classList.toggle("hidden", mode !== "video");
 
       if (mode === "text") {
         stopCameraPreview();
         resetAudioRecording();
         resetVideoRecording();
-        sessionAnswerInput.focus();
+        if (sessionAnswerInput) sessionAnswerInput.focus();
       } else if (mode === "voice") {
         stopCameraPreview();
         resetAudioRecording();
@@ -4271,6 +5438,11 @@
 
       sessionQuestionTitle.textContent = questionData.question;
       sessionAnswerInput.value = "";
+      const charCounter = document.getElementById("answer-char-counter");
+      if (charCounter) {
+        charCounter.textContent = "0 chars (min 10)";
+        charCounter.style.color = "#f87171";
+      }
       resetAudioRecording();
       resetVideoRecording();
 
@@ -5300,10 +6472,20 @@
     // PRACTICE MODE (Existing Phase 1 & 2)
     // ==========================================
 
+    async function loadPracticeQuestions() {
+      try {
+        await loadFilters();
+      } catch (err) {
+        console.warn("Failed to load practice filters", err);
+      }
+    }
+
     async function getRandomQuestion() {
       newQuestionButton.disabled = true;
       feedbackBox.classList.add("hidden");
       previousAnswersBox.classList.add("hidden");
+      const emptyState = document.getElementById("practice-empty-state");
+      if (emptyState) emptyState.classList.add("hidden");
       setStatus("Finding a question...");
 
       try {
@@ -6621,10 +7803,58 @@
     if (btnOpenHistory) btnOpenHistory.addEventListener("click", openAccountHistoryModal);
     if (accountHistoryModalClose) accountHistoryModalClose.addEventListener("click", closeAccountHistoryModal);
 
+    function initEventListeners() {
+      // Active Session & Modality Action Listeners
+      if (sessionSubmitButton) sessionSubmitButton.addEventListener("click", submitSessionAnswer);
+      if (startNewSessionButton) startNewSessionButton.addEventListener("click", resetSessionView);
+      if (sessionAnswerInput) {
+        sessionAnswerInput.addEventListener("input", () => {
+          const charCounter = document.getElementById("answer-char-counter");
+          if (charCounter) {
+            const count = sessionAnswerInput.value.length;
+            charCounter.textContent = `${count} chars (min 10)`;
+            charCounter.style.color = count >= 10 ? "var(--text-muted)" : "#f87171";
+          }
+        });
+      }
+      if (btnModeText) btnModeText.addEventListener("click", () => setAnswerMode("text"));
+      if (btnModeVoice) btnModeVoice.addEventListener("click", () => setAnswerMode("voice"));
+      if (btnModeVideo) btnModeVideo.addEventListener("click", () => setAnswerMode("video"));
+      if (btnRecordStart) btnRecordStart.addEventListener("click", startAudioRecording);
+      if (btnRecordStop) btnRecordStop.addEventListener("click", stopAudioRecording);
+      if (btnSubmitAudio) btnSubmitAudio.addEventListener("click", submitSessionAudioAnswer);
+      if (btnRerecord) btnRerecord.addEventListener("click", resetAudioRecording);
+      if (btnVideoRecordStart) btnVideoRecordStart.addEventListener("click", startVideoRecording);
+      if (btnVideoRecordStop) btnVideoRecordStop.addEventListener("click", stopVideoRecording);
+      if (btnSubmitVideo) btnSubmitVideo.addEventListener("click", submitSessionMultimodalAnswer);
+      if (btnRerecordVideo) btnRerecordVideo.addEventListener("click", resetVideoRecording);
+
+      // Practice Mode Listeners
+      if (newQuestionButton) newQuestionButton.addEventListener("click", getRandomQuestion);
+      if (submitAnswerButton) submitAnswerButton.addEventListener("click", submitPracticeAnswer);
+      if (viewAnswersButton) viewAnswersButton.addEventListener("click", getPreviousAnswers);
+
+      // Analytics Modal Listeners
+      if (btnAnalyticsPrev) btnAnalyticsPrev.addEventListener("click", () => changeAnalyticsPage(-1));
+      if (btnAnalyticsNext) btnAnalyticsNext.addEventListener("click", () => changeAnalyticsPage(1));
+      if (analyticsModalClose) analyticsModalClose.addEventListener("click", closeSessionReview);
+      if (analyticsReviewModal) {
+        analyticsReviewModal.addEventListener("click", (e) => {
+          if (e.target === analyticsReviewModal) closeSessionReview();
+        });
+      }
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && analyticsReviewModal && !analyticsReviewModal.classList.contains("hidden")) {
+          closeSessionReview();
+        }
+      });
+    }
+
     // Initial page load setup
     checkAuthState();
     setupChipGroups();
     loadDashboardData();
+    initEventListeners();
 
   </script>
 </body>
