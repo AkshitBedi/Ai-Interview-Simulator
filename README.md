@@ -2,7 +2,7 @@
 
 A production-grade technical interview simulation and communication intelligence platform. The system conducts realistic, multi-turn technical interviews across Software Engineering domains (Python, Databases & SQL, System Design, and Behavioral), evaluates candidate responses, extracts speech and nonverbal telemetry, and provides evidence-based coaching and longitudinal analytics.
 
-The application is built on a Python FastAPI backend, an embedded SQLite database with Write-Ahead Logging (WAL), and a dependency-free vanilla HTML5/CSS3/JavaScript Single-Page Application (SPA) frontend styled with a dark LeetCode-Problemset-inspired design system.
+The application is built on a Python FastAPI backend, an embedded SQLite database with Write-Ahead Logging (WAL), and a dependency-free vanilla HTML5/CSS3/JavaScript Single-Page Application (SPA) frontend styled with a dark orange black design.
 
 ---
 
