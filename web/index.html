@@ -1609,6 +1609,356 @@
       display: none !important;
     }
 
+
+    /* ==========================================================================
+       PHASE 18B: DASHBOARD + NEW INTERVIEW EXPERIENCE REFINEMENTS
+       ========================================================================== */
+    .new-interview-workspace {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .setup-header-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-bottom: 4px;
+    }
+
+    .setup-badge-tag {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--primary-gold);
+    }
+
+    .setup-main-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.4px;
+    }
+
+    .setup-main-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* 2-Column Responsive Layout */
+    .setup-layout-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .setup-layout-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .setup-col-main {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .setup-col-side {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Config Cards & Groups */
+    .config-group {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.15s;
+    }
+
+    .config-group:focus-within {
+      border-color: #3b82f6;
+    }
+
+    .config-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .config-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .config-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Chip Matrix & Custom Chips */
+    .chip-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .choice-chip {
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      color: #d1d1d6;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+      transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+    }
+
+    .choice-chip:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-elevated);
+      color: #ffffff;
+    }
+
+    .choice-chip:focus-visible {
+      outline: 2px solid var(--primary-gold);
+      outline-offset: 2px;
+    }
+
+    .choice-chip.active {
+      background: rgba(234, 179, 8, 0.12);
+      border-color: #eab308;
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    /* Interview Mode Large Chips */
+    .mode-chip-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    @media (max-width: 480px) {
+      .mode-chip-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .mode-large-chip {
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 12px 14px;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .mode-large-chip:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-elevated);
+    }
+
+    .mode-large-chip:focus-visible {
+      outline: 2px solid var(--primary-gold);
+      outline-offset: 2px;
+    }
+
+    .mode-large-chip.active {
+      background: rgba(234, 179, 8, 0.12);
+      border-color: #eab308;
+    }
+
+    .mode-large-chip .chip-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .mode-large-chip .chip-subtitle {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Answer Mode Cards */
+    .answer-mode-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mode-card {
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+
+    .mode-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-elevated);
+    }
+
+    .mode-card:focus-visible {
+      outline: 2px solid var(--primary-gold);
+      outline-offset: 2px;
+    }
+
+    .mode-card.active {
+      background: rgba(59, 130, 246, 0.12);
+      border-color: #3b82f6;
+    }
+
+    .mode-card-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #3b82f6;
+      flex-shrink: 0;
+    }
+
+    .mode-card.active .mode-card-icon {
+      background: rgba(59, 130, 246, 0.25);
+      color: #60a5fa;
+    }
+
+    .mode-card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .mode-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .mode-card-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Live Summary Card */
+    .config-summary-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .summary-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 8px;
+    }
+
+    .summary-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    .summary-item-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .summary-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+    }
+
+    .summary-key {
+      color: var(--text-secondary);
+    }
+
+    .summary-val {
+      color: #ffffff;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    /* Inline Error Banner */
+    .setup-inline-error {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #fca5a5;
+      line-height: 1.4;
+    }
+
+    /* Start Button & Spinner */
+    .start-interview-cta {
+      width: 100%;
+      padding: 14px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0, 0, 0, 0.2);
+      border-top-color: #000000;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
   </style>
 </head>
 <body>
@@ -1902,155 +2252,254 @@
       <!-- VIEW 2: Full Interview Session (session-container) -->
       <div id="session-container" class="hidden">
         <section id="session-setup" class="new-interview-workspace">
+          <!-- Page Header -->
           <div class="setup-header-block">
-            <h2 class="setup-main-title">New Interview Configuration</h2>
-            <p class="setup-main-desc">Configure technical interview parameters and AI interviewer persona.</p>
+            <div class="setup-badge-tag">NEW INTERVIEW</div>
+            <h1 class="setup-main-title">Configure your interview before you begin.</h1>
+            <p class="setup-main-desc">Customize format, topics, difficulty, and persona for a realistic developer interview.</p>
           </div>
 
-          <!-- Mode -->
-          <div class="config-group">
-            <label class="config-label">Interview Mode</label>
-            <div class="chip-container" id="mode-chips">
-              <button type="button" class="choice-chip active" data-mode="full">Full Mock Interview</button>
-              <button type="button" class="choice-chip" data-mode="single">Single Question</button>
-            </div>
-          </div>
-
-          <!-- Focus Categories -->
-          <div class="config-group">
-            <div class="config-label-row">
-              <label class="config-label">Focus Categories</label>
-              <span class="config-hint">Multi-select or All</span>
-            </div>
-            <div class="chip-container" id="category-chips">
-              <button type="button" class="choice-chip active" data-cat="all">All Categories</button>
-              <button type="button" class="choice-chip" data-cat="Python">Python</button>
-              <button type="button" class="choice-chip" data-cat="Databases">Databases</button>
-              <button type="button" class="choice-chip" data-cat="System Design">System Design</button>
-              <button type="button" class="choice-chip" data-cat="Behavioral">Behavioral</button>
-            </div>
-            <!-- Preserved legacy checkboxes hidden from view -->
-            <div id="legacy-category-checkboxes" style="display: none;" aria-hidden="true">
-              <input type="checkbox" id="cat-all" value="all" checked />
-              <input type="checkbox" class="cat-checkbox" value="Python" />
-              <input type="checkbox" class="cat-checkbox" value="Databases" />
-              <input type="checkbox" class="cat-checkbox" value="System Design" />
-              <input type="checkbox" class="cat-checkbox" value="Behavioral" />
-            </div>
-          </div>
-
-          <!-- Difficulty -->
-          <div class="config-group">
-            <div class="config-label-row">
-              <label class="config-label">Difficulty</label>
-              <span class="config-hint">Adaptive dynamically adjusts</span>
-            </div>
-            <div class="chip-container" id="difficulty-chips">
-              <button type="button" class="choice-chip" data-diff="easy">Easy</button>
-              <button type="button" class="choice-chip" data-diff="medium">Medium</button>
-              <button type="button" class="choice-chip" data-diff="hard">Hard</button>
-              <button type="button" class="choice-chip active" data-diff="">Adaptive</button>
-            </div>
-            <select id="session-difficulty" style="display: none;" aria-hidden="true">
-              <option value="">Adaptive (dynamic)</option>
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="hard">Hard</option>
-            </select>
-          </div>
-
-          <!-- Interviewer Style & Turns -->
-          <div class="two-col-config">
-            <div class="config-group">
-              <label class="config-label">Interviewer Style</label>
-              <div class="chip-container" id="style-chips" style="margin-top: 10px;">
-                <button type="button" class="choice-chip active" data-style="professional">Professional</button>
-                <button type="button" class="choice-chip" data-style="conversational">Conversational</button>
-                <button type="button" class="choice-chip" data-style="strict">Strict</button>
-              </div>
-              <select id="session-interviewer-style" style="display: none;" aria-hidden="true">
-                <option value="professional">Professional</option>
-                <option value="conversational">Conversational</option>
-                <option value="strict">Strict</option>
-              </select>
-            </div>
-
-            <div class="config-group">
-              <label class="config-label">Turn Budget</label>
-              <div class="chip-container" id="turns-chips" style="margin-top: 10px;">
-                <button type="button" class="choice-chip" data-turns="3">3</button>
-                <button type="button" class="choice-chip active" data-turns="5">5</button>
-                <button type="button" class="choice-chip" data-turns="8">8</button>
-                <button type="button" class="choice-chip" data-turns="10">10</button>
-              </div>
-              <select id="session-turns" style="display: none;" aria-hidden="true">
-                <option value="3">3 turns</option>
-                <option value="5" selected>5 turns</option>
-                <option value="8">8 turns</option>
-                <option value="10">10 turns</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Experience Level -->
-          <div class="config-group">
-            <label class="config-label">Experience Level</label>
-            <div class="chip-container" id="exp-chips" style="margin-top: 10px;">
-              <button type="button" class="choice-chip" data-exp="junior">Junior</button>
-              <button type="button" class="choice-chip active" data-exp="mid">Mid</button>
-              <button type="button" class="choice-chip" data-exp="senior">Senior</button>
-            </div>
-            <select id="session-experience-level" style="display: none;" aria-hidden="true">
-              <option value="junior">Junior</option>
-              <option value="mid" selected>Mid-level</option>
-              <option value="senior">Senior</option>
-            </select>
-          </div>
-
-          <!-- Expandable Personalization Accordion -->
-          <div class="personalization-accordion">
-            <button type="button" id="toggle-personalization" class="accordion-header-btn">
-              <span>Personalization (Target Role, Resume, Job Description)</span>
-              <span id="accordion-arrow">▼</span>
-            </button>
-            <div id="personalization-fields" class="accordion-content hidden">
-              <div>
-                <label for="session-target-role" class="config-label" style="display: block; margin-bottom: 6px;">Target Role (Optional)</label>
-                <input type="text" id="session-target-role" class="config-input-field" placeholder="e.g. Senior Backend Engineer, Distributed Systems" />
-              </div>
-              <div>
+          <div class="setup-layout-grid">
+            <!-- LEFT COLUMN: Core Configuration -->
+            <div class="setup-col-main">
+              <!-- 1. Interview Mode -->
+              <div class="config-group" id="group-interview-mode">
                 <div class="config-label-row">
-                  <label for="session-resume-text" class="config-label">Resume / Background</label>
-                  <span id="resume-char-count" class="config-hint">0 / 8,000</span>
+                  <label class="config-label">INTERVIEW MODE</label>
+                  <span class="config-hint">Select interview format</span>
                 </div>
-                <textarea id="session-resume-text" class="config-textarea" maxlength="8000" placeholder="Paste your resume or relevant experience summary..."></textarea>
+                <div class="mode-chip-container" id="mode-chips">
+                  <button type="button" class="mode-large-chip active" data-mode="full" aria-pressed="true">
+                    <span class="chip-title">Full Mock Interview</span>
+                    <span class="chip-subtitle">Multi-turn technical session with progression</span>
+                  </button>
+                  <button type="button" class="mode-large-chip" data-mode="single" aria-pressed="false">
+                    <span class="chip-title">Single Question</span>
+                    <span class="chip-subtitle">Targeted single question benchmark</span>
+                  </button>
+                </div>
               </div>
-              <div>
+
+              <!-- 2. Focus Categories (Multi-select) -->
+              <div class="config-group" id="group-category-focus">
                 <div class="config-label-row">
-                  <label for="session-job-description" class="config-label">Job Description</label>
-                  <span id="jd-char-count" class="config-hint">0 / 8,000</span>
+                  <label class="config-label">FOCUS</label>
+                  <span class="config-hint" id="cat-selection-hint">Multi-select or All</span>
                 </div>
-                <textarea id="session-job-description" class="config-textarea" maxlength="8000" placeholder="Paste target job description..."></textarea>
+                <div class="chip-container" id="category-chips">
+                  <button type="button" class="choice-chip active" data-cat="all" aria-pressed="true">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    <span>All Categories</span>
+                  </button>
+                  <button type="button" class="choice-chip" data-cat="Python" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M11.9 2C6.5 2 6.8 4.3 6.8 4.3l.1 2.4h5.1v.7H4.7S2 7.1 2 12.5s2.4 5.2 2.4 5.2l1.4-.2v-2s-.1-2.4 2.4-2.4h4.1v-.8H6.9v-.7h7.2c1.4 0 2.4-.9 2.4-2.4V4.4S16.9 2 11.9 2z" fill="#387eb8"/><circle cx="8.5" cy="4.5" r="0.9" fill="#ffffff"/><path d="M12.1 22c5.4 0 5.1-2.3 5.1-2.3l-.1-2.4h-5.1v-.7h7.3s2.7.3 2.7-5.1-2.4-5.2-2.4-5.2l-1.4.2v2s.1 2.4-2.4 2.4h-4.1v.8h5.4v.7H9.9c-1.4 0-2.4.9-2.4 2.4v4.8s-.4 2.4 4.6 2.4z" fill="#f5b82e"/><circle cx="15.5" cy="19.5" r="0.9" fill="#ffffff"/></svg>
+                    <span>Python</span>
+                  </button>
+                  <button type="button" class="choice-chip" data-cat="Databases" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3" fill="rgba(59, 130, 246, 0.25)"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                    <span>Databases</span>
+                  </button>
+                  <button type="button" class="choice-chip" data-cat="System Design" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="5" rx="1.5" fill="rgba(168, 85, 247, 0.25)"/><rect x="2" y="16" width="5" height="5" rx="1.5" fill="rgba(168, 85, 247, 0.25)"/><rect x="9.5" y="16" width="5" height="5" rx="1.5" fill="rgba(168, 85, 247, 0.25)"/><rect x="17" y="16" width="5" height="5" rx="1.5" fill="rgba(168, 85, 247, 0.25)"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="4.5" y1="12" x2="19.5" y2="12"/><line x1="4.5" y1="12" x2="4.5" y2="16"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="19.5" y1="12" x2="19.5" y2="16"/></svg>
+                    <span>System Design</span>
+                  </button>
+                  <button type="button" class="choice-chip" data-cat="Behavioral" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" fill="rgba(244, 63, 94, 0.25)"/><circle cx="9" cy="7" r="4" fill="rgba(244, 63, 94, 0.25)"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span>Behavioral</span>
+                  </button>
+                </div>
+                <!-- Preserved legacy checkboxes hidden from view -->
+                <div id="legacy-category-checkboxes" style="display: none;" aria-hidden="true">
+                  <input type="checkbox" id="cat-all" value="all" checked />
+                  <input type="checkbox" class="cat-checkbox" value="Python" />
+                  <input type="checkbox" class="cat-checkbox" value="Databases" />
+                  <input type="checkbox" class="cat-checkbox" value="System Design" />
+                  <input type="checkbox" class="cat-checkbox" value="Behavioral" />
+                </div>
+              </div>
+
+              <!-- 3. Difficulty (Adaptive Preset) -->
+              <div class="config-group" id="group-difficulty">
+                <div class="config-label-row">
+                  <label class="config-label">DIFFICULTY</label>
+                  <span class="config-hint" id="diff-hint-text">Adaptive dynamically adjusts questions</span>
+                </div>
+                <div class="chip-container" id="difficulty-chips">
+                  <button type="button" class="choice-chip" data-diff="easy" aria-pressed="false">Easy</button>
+                  <button type="button" class="choice-chip" data-diff="medium" aria-pressed="false">Medium</button>
+                  <button type="button" class="choice-chip" data-diff="hard" aria-pressed="false">Hard</button>
+                  <button type="button" class="choice-chip active" data-diff="" aria-pressed="true">Adaptive</button>
+                </div>
+                <select id="session-difficulty" style="display: none;" aria-hidden="true">
+                  <option value="" selected>Adaptive (dynamic)</option>
+                  <option value="easy">Easy</option>
+                  <option value="medium">Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </div>
+
+              <!-- 4. Turn Budget & Experience Level -->
+              <div class="two-col-config">
+                <div class="config-group" id="group-turns">
+                  <div class="config-label-row">
+                    <label class="config-label">TURN BUDGET</label>
+                    <span class="config-hint" id="turns-mode-hint">Questions in session</span>
+                  </div>
+                  <div class="chip-container" id="turns-chips">
+                    <button type="button" class="choice-chip" data-turns="3">3</button>
+                    <button type="button" class="choice-chip active" data-turns="5">5</button>
+                    <button type="button" class="choice-chip" data-turns="8">8</button>
+                    <button type="button" class="choice-chip" data-turns="10">10</button>
+                  </div>
+                  <div class="custom-turns-row" style="margin-top: 4px; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Custom:</span>
+                    <input type="number" id="custom-turns-input" min="1" max="20" placeholder="5" value="5" class="custom-turns-field" style="width: 60px; padding: 4px 8px; font-size: 12px; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 4px; color: #fff; text-align: center;" aria-label="Custom turns between 1 and 20" />
+                    <span style="font-size: 11px; color: var(--text-muted);">(1–20)</span>
+                  </div>
+                  <select id="session-turns" style="display: none;" aria-hidden="true">
+                    <option value="1">1 turn</option>
+                    <option value="3">3 turns</option>
+                    <option value="5" selected>5 turns</option>
+                    <option value="8">8 turns</option>
+                    <option value="10">10 turns</option>
+                  </select>
+                </div>
+
+                <div class="config-group" id="group-experience">
+                  <div class="config-label-row">
+                    <label class="config-label">EXPERIENCE</label>
+                    <span class="config-hint">Candidate seniority</span>
+                  </div>
+                  <div class="chip-container" id="exp-chips">
+                    <button type="button" class="choice-chip" data-exp="junior">Junior</button>
+                    <button type="button" class="choice-chip active" data-exp="mid">Mid</button>
+                    <button type="button" class="choice-chip" data-exp="senior">Senior</button>
+                  </div>
+                  <select id="session-experience-level" style="display: none;" aria-hidden="true">
+                    <option value="junior">Junior</option>
+                    <option value="mid" selected>Mid-level</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 5. Interviewer Style -->
+              <div class="config-group" id="group-style">
+                <div class="config-label-row">
+                  <label class="config-label">INTERVIEWER STYLE</label>
+                  <span class="config-hint">Persona tone</span>
+                </div>
+                <div class="chip-container" id="style-chips">
+                  <button type="button" class="choice-chip active" data-style="professional">Professional</button>
+                  <button type="button" class="choice-chip" data-style="conversational">Conversational</button>
+                  <button type="button" class="choice-chip" data-style="strict">Strict</button>
+                </div>
+                <select id="session-interviewer-style" style="display: none;" aria-hidden="true">
+                  <option value="professional" selected>Professional</option>
+                  <option value="conversational">Conversational</option>
+                  <option value="strict">Strict</option>
+                </select>
               </div>
             </div>
-          </div>
 
-          <!-- Answer Input Mode -->
-          <div class="config-group">
-            <label class="config-label">Answer Mode</label>
-            <div class="chip-container" id="setup-answer-mode-chips" style="margin-top: 10px;">
-              <button type="button" class="choice-chip active" data-mode="text">Type Answer</button>
-              <button type="button" class="choice-chip" data-mode="voice">Voice Only</button>
-              <button type="button" class="choice-chip" data-mode="vision">Camera + Voice</button>
+            <!-- RIGHT COLUMN: Modality, Personalization, Summary & Action -->
+            <div class="setup-col-side">
+              <!-- 6. Answer Mode Cards -->
+              <div class="config-group" id="group-answer-mode">
+                <div class="config-label-row">
+                  <label class="config-label">ANSWER MODE</label>
+                  <span class="config-hint">Modality</span>
+                </div>
+                <div class="answer-mode-cards" id="setup-answer-mode-chips">
+                  <button type="button" class="mode-card active" data-mode="text" aria-pressed="true">
+                    <div class="mode-card-icon">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="10" y2="8"/><line x1="14" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>
+                    </div>
+                    <div class="mode-card-info">
+                      <div class="mode-card-title">Type Answer</div>
+                      <div class="mode-card-desc">Markdown text editor</div>
+                    </div>
+                  </button>
+                  <button type="button" class="mode-card" data-mode="voice" aria-pressed="false">
+                    <div class="mode-card-icon">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                    </div>
+                    <div class="mode-card-info">
+                      <div class="mode-card-title">Voice Only</div>
+                      <div class="mode-card-desc">Speech recognition & pace</div>
+                    </div>
+                  </button>
+                  <button type="button" class="mode-card" data-mode="vision" aria-pressed="false">
+                    <div class="mode-card-icon">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                    </div>
+                    <div class="mode-card-info">
+                      <div class="mode-card-title">Camera + Voice</div>
+                      <div class="mode-card-desc">Nonverbal cues & audio</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 7. Expandable Personalization Accordion -->
+              <div class="personalization-accordion">
+                <button type="button" id="toggle-personalization" class="accordion-header-btn" aria-expanded="false" aria-controls="personalization-fields">
+                  <div class="accordion-title-left" style="display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#eab308" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span>PERSONALIZATION</span>
+                  </div>
+                  <span id="accordion-arrow" class="accordion-arrow">▼</span>
+                </button>
+                <div id="personalization-fields" class="accordion-content hidden">
+                  <div>
+                    <div class="config-label-row" style="margin-bottom: 6px;">
+                      <label for="session-target-role" class="config-label">TARGET ROLE</label>
+                      <span id="role-char-count" class="config-hint">Max 100</span>
+                    </div>
+                    <input type="text" id="session-target-role" maxlength="100" class="config-input-field" placeholder="e.g. Software Engineer, Backend Developer" />
+                  </div>
+                  <div>
+                    <div class="config-label-row" style="margin-bottom: 6px;">
+                      <label for="session-resume-text" class="config-label">RESUME</label>
+                      <span id="resume-char-count" class="config-hint">0 / 15,000</span>
+                    </div>
+                    <textarea id="session-resume-text" class="config-textarea" maxlength="15000" placeholder="Paste your resume text here..."></textarea>
+                  </div>
+                  <div>
+                    <div class="config-label-row" style="margin-bottom: 6px;">
+                      <label for="session-job-description" class="config-label">JOB DESCRIPTION</label>
+                      <span id="jd-char-count" class="config-hint">0 / 10,000</span>
+                    </div>
+                    <textarea id="session-job-description" class="config-textarea" maxlength="10000" placeholder="Paste the job description here..."></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 8. Live Configuration Summary Card -->
+              <div class="config-summary-card" id="config-live-summary">
+                <div class="summary-header">
+                  <span class="summary-badge">CONFIGURATION SUMMARY</span>
+                </div>
+                <div class="summary-item-grid">
+                  <div class="summary-row"><span class="summary-key">Format</span><span class="summary-val" id="sum-format">Full Mock (5 turns)</span></div>
+                  <div class="summary-row"><span class="summary-key">Focus</span><span class="summary-val" id="sum-focus">All Categories</span></div>
+                  <div class="summary-row"><span class="summary-key">Difficulty</span><span class="summary-val" id="sum-difficulty">Adaptive</span></div>
+                  <div class="summary-row"><span class="summary-key">Experience</span><span class="summary-val" id="sum-experience">Mid</span></div>
+                  <div class="summary-row"><span class="summary-key">Style</span><span class="summary-val" id="sum-style">Professional</span></div>
+                  <div class="summary-row"><span class="summary-key">Input</span><span class="summary-val" id="sum-modality">Type Answer</span></div>
+                  <div class="summary-row hidden" id="sum-role-row"><span class="summary-key">Target Role</span><span class="summary-val" id="sum-role">—</span></div>
+                </div>
+              </div>
+
+              <!-- 9. Inline Error Banner -->
+              <div id="setup-error-notice" class="setup-inline-error hidden" role="alert" aria-live="polite"></div>
+
+              <!-- 10. Primary Submit CTA -->
+              <button type="button" id="start-session-button" class="btn-hero-primary start-interview-cta" onclick="startSession()">
+                <span id="start-btn-text">Start Interview</span>
+                <span class="btn-arrow" id="start-btn-arrow">→</span>
+              </button>
             </div>
-          </div>
-
-          <!-- Primary Submit CTA -->
-          <div style="margin-top: 8px;">
-            <button type="button" id="start-session-button" class="btn-hero-primary" style="padding: 14px 32px; font-size: 15px;">
-              <span>Start Interview</span>
-              <span class="btn-arrow">→</span>
-            </button>
           </div>
         </section>
       <section id="session-active" class="card session-question-card hidden">
@@ -3121,8 +3570,208 @@
     }
 
     // Interactive Configuration Chips Binding
+    // Live Configuration Summary Updater
+    function updateConfigSummary() {
+      // 1. Format & Turns
+      const activeModeChip = document.querySelector("#mode-chips .mode-large-chip.active");
+      const isSingle = activeModeChip && activeModeChip.getAttribute("data-mode") === "single";
+      const turnsSelect = document.getElementById("session-turns");
+      const customTurnsInput = document.getElementById("custom-turns-input");
+      const turnsVal = isSingle ? 1 : (parseInt(customTurnsInput && customTurnsInput.value ? customTurnsInput.value : (turnsSelect ? turnsSelect.value : "5"), 10) || 5);
+
+      const sumFormat = document.getElementById("sum-format");
+      if (sumFormat) {
+        sumFormat.textContent = isSingle ? "Single Question (1 turn)" : `Full Mock (${turnsVal} turns)`;
+      }
+
+      // 2. Focus Categories
+      const catAllChip = document.querySelector('#category-chips [data-cat="all"]');
+      const activeCatChips = Array.from(document.querySelectorAll('#category-chips .choice-chip.active')).filter(c => c.getAttribute("data-cat") !== "all");
+      const sumFocus = document.getElementById("sum-focus");
+      if (sumFocus) {
+        if (catAllChip && catAllChip.classList.contains("active")) {
+          sumFocus.textContent = "All Categories";
+        } else if (activeCatChips.length === 1) {
+          sumFocus.textContent = activeCatChips[0].getAttribute("data-cat");
+        } else if (activeCatChips.length > 1) {
+          sumFocus.textContent = activeCatChips.map(c => c.getAttribute("data-cat")).join(" + ");
+        } else {
+          sumFocus.textContent = "All Categories";
+        }
+      }
+
+      // 3. Difficulty
+      const activeDiffChip = document.querySelector("#difficulty-chips .choice-chip.active");
+      const sumDiff = document.getElementById("sum-difficulty");
+      if (sumDiff) {
+        sumDiff.textContent = activeDiffChip ? activeDiffChip.textContent.trim() : "Adaptive";
+      }
+
+      // 4. Experience
+      const activeExpChip = document.querySelector("#exp-chips .choice-chip.active");
+      const sumExp = document.getElementById("sum-experience");
+      if (sumExp) {
+        sumExp.textContent = activeExpChip ? activeExpChip.textContent.trim() : "Mid";
+      }
+
+      // 5. Style
+      const activeStyleChip = document.querySelector("#style-chips .choice-chip.active");
+      const sumStyle = document.getElementById("sum-style");
+      if (sumStyle) {
+        sumStyle.textContent = activeStyleChip ? activeStyleChip.textContent.trim() : "Professional";
+      }
+
+      // 6. Modality
+      const activeModeCard = document.querySelector("#setup-answer-mode-chips .mode-card.active");
+      const sumModality = document.getElementById("sum-modality");
+      if (sumModality && activeModeCard) {
+        const titleEl = activeModeCard.querySelector(".mode-card-title");
+        sumModality.textContent = titleEl ? titleEl.textContent.trim() : "Type Answer";
+      }
+
+      // 7. Target Role
+      const roleInput = document.getElementById("session-target-role");
+      const roleVal = roleInput ? roleInput.value.trim() : "";
+      const roleRow = document.getElementById("sum-role-row");
+      const sumRole = document.getElementById("sum-role");
+      if (roleRow && sumRole) {
+        if (roleVal) {
+          sumRole.textContent = roleVal;
+          roleRow.classList.remove("hidden");
+        } else {
+          roleRow.classList.add("hidden");
+        }
+      }
+    }
+
+    // Live Configuration Summary Updater
+    function updateConfigSummary() {
+      // 1. Format & Turns
+      const activeModeChip = document.querySelector("#mode-chips .mode-large-chip.active");
+      const isSingle = activeModeChip && activeModeChip.getAttribute("data-mode") === "single";
+      const turnsSelect = document.getElementById("session-turns");
+      const customTurnsInput = document.getElementById("custom-turns-input");
+      const turnsVal = isSingle ? 1 : (parseInt(customTurnsInput && customTurnsInput.value ? customTurnsInput.value : (turnsSelect ? turnsSelect.value : "5"), 10) || 5);
+
+      const sumFormat = document.getElementById("sum-format");
+      if (sumFormat) {
+        sumFormat.textContent = isSingle ? "Single Question (1 turn)" : `Full Mock (${turnsVal} turns)`;
+      }
+
+      // 2. Focus Categories
+      const catAllChip = document.querySelector('#category-chips [data-cat="all"]');
+      const activeCatChips = Array.from(document.querySelectorAll('#category-chips .choice-chip.active')).filter(c => c.getAttribute("data-cat") !== "all");
+      const sumFocus = document.getElementById("sum-focus");
+      if (sumFocus) {
+        if (catAllChip && catAllChip.classList.contains("active")) {
+          sumFocus.textContent = "All Categories";
+        } else if (activeCatChips.length === 1) {
+          sumFocus.textContent = activeCatChips[0].getAttribute("data-cat");
+        } else if (activeCatChips.length > 1) {
+          sumFocus.textContent = activeCatChips.map(c => c.getAttribute("data-cat")).join(" + ");
+        } else {
+          sumFocus.textContent = "All Categories";
+        }
+      }
+
+      // 3. Difficulty
+      const activeDiffChip = document.querySelector("#difficulty-chips .choice-chip.active");
+      const sumDiff = document.getElementById("sum-difficulty");
+      if (sumDiff) {
+        sumDiff.textContent = activeDiffChip ? activeDiffChip.textContent.trim() : "Adaptive";
+      }
+
+      // 4. Experience
+      const activeExpChip = document.querySelector("#exp-chips .choice-chip.active");
+      const sumExp = document.getElementById("sum-experience");
+      if (sumExp) {
+        sumExp.textContent = activeExpChip ? activeExpChip.textContent.trim() : "Mid";
+      }
+
+      // 5. Style
+      const activeStyleChip = document.querySelector("#style-chips .choice-chip.active");
+      const sumStyle = document.getElementById("sum-style");
+      if (sumStyle) {
+        sumStyle.textContent = activeStyleChip ? activeStyleChip.textContent.trim() : "Professional";
+      }
+
+      // 6. Modality
+      const activeModeCard = document.querySelector("#setup-answer-mode-chips .mode-card.active");
+      const sumModality = document.getElementById("sum-modality");
+      if (sumModality && activeModeCard) {
+        const titleEl = activeModeCard.querySelector(".mode-card-title");
+        sumModality.textContent = titleEl ? titleEl.textContent.trim() : "Type Answer";
+      }
+
+      // 7. Target Role
+      const roleInput = document.getElementById("session-target-role");
+      const roleVal = roleInput ? roleInput.value.trim() : "";
+      const roleRow = document.getElementById("sum-role-row");
+      const sumRole = document.getElementById("sum-role");
+      if (roleRow && sumRole) {
+        if (roleVal) {
+          sumRole.textContent = roleVal;
+          roleRow.classList.remove("hidden");
+        } else {
+          roleRow.classList.add("hidden");
+        }
+      }
+    }
+
     function setupChipGroups() {
-      // Category Chips
+      // 1. Interview Mode Chips (Full Mock vs Single Question)
+      const modeChips = document.querySelectorAll("#mode-chips .mode-large-chip");
+      const turnsSelect = document.getElementById("session-turns");
+      const customTurnsInput = document.getElementById("custom-turns-input");
+      const turnsChips = document.querySelectorAll("#turns-chips .choice-chip");
+      const turnsHint = document.getElementById("turns-mode-hint");
+
+      modeChips.forEach(chip => {
+        chip.addEventListener("click", () => {
+          modeChips.forEach(c => {
+            c.classList.remove("active");
+            c.setAttribute("aria-pressed", "false");
+          });
+          chip.classList.add("active");
+          chip.setAttribute("aria-pressed", "true");
+
+          const isSingle = chip.getAttribute("data-mode") === "single";
+          if (isSingle) {
+            // Force max_turns to 1
+            if (turnsSelect) turnsSelect.value = "1";
+            if (customTurnsInput) {
+              customTurnsInput.value = "1";
+              customTurnsInput.disabled = true;
+            }
+            turnsChips.forEach(c => {
+              c.classList.remove("active");
+              c.disabled = true;
+              c.style.opacity = "0.4";
+            });
+            if (turnsHint) turnsHint.textContent = "Locked to 1 question";
+          } else {
+            // Restore turns budget
+            if (turnsSelect) turnsSelect.value = "5";
+            if (customTurnsInput) {
+              customTurnsInput.value = "5";
+              customTurnsInput.disabled = false;
+            }
+            turnsChips.forEach(c => {
+              c.disabled = false;
+              c.style.opacity = "1";
+              if (c.getAttribute("data-turns") === "5") {
+                c.classList.add("active");
+              } else {
+                c.classList.remove("active");
+              }
+            });
+            if (turnsHint) turnsHint.textContent = "Questions in session";
+          }
+          updateConfigSummary();
+        });
+      });
+
+      // 2. Focus Category Chips (Multi-select or All)
       const catChips = document.querySelectorAll("#category-chips .choice-chip");
       const catAllBox = document.getElementById("cat-all");
       const catBoxes = document.querySelectorAll(".cat-checkbox");
@@ -3130,41 +3779,98 @@
       catChips.forEach(chip => {
         chip.addEventListener("click", () => {
           const val = chip.getAttribute("data-cat");
+          const allChip = document.querySelector('#category-chips [data-cat="all"]');
+
           if (val === "all") {
-            catChips.forEach(c => c.classList.remove("active"));
+            // Clicking All Categories selects All and unselects individual
+            catChips.forEach(c => {
+              c.classList.remove("active");
+              c.setAttribute("aria-pressed", "false");
+            });
             chip.classList.add("active");
+            chip.setAttribute("aria-pressed", "true");
             if (catAllBox) catAllBox.checked = true;
             catBoxes.forEach(b => b.checked = false);
           } else {
-            const allChip = document.querySelector('#category-chips [data-cat="all"]');
-            if (allChip) allChip.classList.remove("active");
+            // Toggle individual category
+            if (allChip) {
+              allChip.classList.remove("active");
+              allChip.setAttribute("aria-pressed", "false");
+            }
             if (catAllBox) catAllBox.checked = false;
 
-            chip.classList.toggle("active");
+            const isCurrentlyActive = chip.classList.contains("active");
+            if (isCurrentlyActive) {
+              chip.classList.remove("active");
+              chip.setAttribute("aria-pressed", "false");
+            } else {
+              chip.classList.add("active");
+              chip.setAttribute("aria-pressed", "true");
+            }
+
+            // Sync hidden legacy checkboxes
             const box = Array.from(catBoxes).find(b => b.value === val);
             if (box) box.checked = chip.classList.contains("active");
 
-            const anyActive = Array.from(catChips).some(c => c.getAttribute("data-cat") !== "all" && c.classList.contains("active"));
-            if (!anyActive && allChip) {
+            // Check how many individual chips are active
+            const activeIndiv = Array.from(catChips).filter(c => c.getAttribute("data-cat") !== "all" && c.classList.contains("active"));
+
+            // If all 4 individual are selected, normalize to All Categories
+            if (activeIndiv.length === 4) {
+              catChips.forEach(c => {
+                c.classList.remove("active");
+                c.setAttribute("aria-pressed", "false");
+              });
+              if (allChip) {
+                allChip.classList.add("active");
+                allChip.setAttribute("aria-pressed", "true");
+              }
+              if (catAllBox) catAllBox.checked = true;
+              catBoxes.forEach(b => b.checked = false);
+            } else if (activeIndiv.length === 0 && allChip) {
+              // If none active, fallback to All
               allChip.classList.add("active");
+              allChip.setAttribute("aria-pressed", "true");
               if (catAllBox) catAllBox.checked = true;
             }
           }
+          updateConfigSummary();
         });
       });
 
-      // Difficulty Chips
+      // 3. Difficulty Chips (Adaptive preset mapping)
       const diffChips = document.querySelectorAll("#difficulty-chips .choice-chip");
       const diffSelect = document.getElementById("session-difficulty");
+      const diffHint = document.getElementById("diff-hint-text");
+
       diffChips.forEach(chip => {
         chip.addEventListener("click", () => {
-          diffChips.forEach(c => c.classList.remove("active"));
+          diffChips.forEach(c => {
+            c.classList.remove("active");
+            c.setAttribute("aria-pressed", "false");
+          });
           chip.classList.add("active");
-          if (diffSelect) diffSelect.value = chip.getAttribute("data-diff");
+          chip.setAttribute("aria-pressed", "true");
+
+          const diffVal = chip.getAttribute("data-diff");
+          if (diffSelect) diffSelect.value = diffVal;
+
+          if (diffHint) {
+            if (!diffVal) {
+              diffHint.textContent = "Adaptive dynamically adjusts questions";
+            } else if (diffVal === "easy") {
+              diffHint.textContent = "Entry-level foundational questions";
+            } else if (diffVal === "medium") {
+              diffHint.textContent = "Industry standard technical bar";
+            } else if (diffVal === "hard") {
+              diffHint.textContent = "Challenging edge-cases and architecture";
+            }
+          }
+          updateConfigSummary();
         });
       });
 
-      // Style Chips
+      // 4. Interviewer Style Chips
       const styleChips = document.querySelectorAll("#style-chips .choice-chip");
       const styleSelect = document.getElementById("session-interviewer-style");
       styleChips.forEach(chip => {
@@ -3172,21 +3878,46 @@
           styleChips.forEach(c => c.classList.remove("active"));
           chip.classList.add("active");
           if (styleSelect) styleSelect.value = chip.getAttribute("data-style");
+          updateConfigSummary();
         });
       });
 
-      // Turns Chips
-      const turnsChips = document.querySelectorAll("#turns-chips .choice-chip");
-      const turnsSelect = document.getElementById("session-turns");
+      // 5. Turn Budget Chips & Custom Turns Input
+      const turnsSelectForChips = document.getElementById("session-turns");
+      const customTurnsInputForChips = document.getElementById("custom-turns-input");
+
       turnsChips.forEach(chip => {
         chip.addEventListener("click", () => {
           turnsChips.forEach(c => c.classList.remove("active"));
           chip.classList.add("active");
-          if (turnsSelect) turnsSelect.value = chip.getAttribute("data-turns");
+          const tVal = chip.getAttribute("data-turns");
+          if (turnsSelectForChips) turnsSelectForChips.value = tVal;
+          if (customTurnsInputForChips) customTurnsInputForChips.value = tVal;
+          updateConfigSummary();
         });
       });
 
-      // Experience Chips
+      if (customTurnsInputForChips) {
+        customTurnsInputForChips.addEventListener("input", () => {
+          let num = parseInt(customTurnsInputForChips.value, 10);
+          if (!isNaN(num)) {
+            if (num > 20) num = 20;
+            if (num < 1) num = 1;
+            if (turnsSelectForChips) turnsSelectForChips.value = String(num);
+
+            turnsChips.forEach(c => {
+              if (c.getAttribute("data-turns") === String(num)) {
+                c.classList.add("active");
+              } else {
+                c.classList.remove("active");
+              }
+            });
+            updateConfigSummary();
+          }
+        });
+      }
+
+      // 6. Experience Level Chips
       const expChips = document.querySelectorAll("#exp-chips .choice-chip");
       const expSelect = document.getElementById("session-experience-level");
       expChips.forEach(chip => {
@@ -3194,20 +3925,27 @@
           expChips.forEach(c => c.classList.remove("active"));
           chip.classList.add("active");
           if (expSelect) expSelect.value = chip.getAttribute("data-exp");
+          updateConfigSummary();
         });
       });
 
-      // Answer Mode Chips
-      const answerModeChips = document.querySelectorAll("#setup-answer-mode-chips .choice-chip");
-      answerModeChips.forEach(chip => {
-        chip.addEventListener("click", () => {
-          answerModeChips.forEach(c => c.classList.remove("active"));
-          chip.classList.add("active");
-          setAnswerMode(chip.getAttribute("data-mode"));
+      // 7. Answer Mode Cards
+      const answerModeCards = document.querySelectorAll("#setup-answer-mode-chips .mode-card");
+      answerModeCards.forEach(card => {
+        card.addEventListener("click", () => {
+          answerModeCards.forEach(c => {
+            c.classList.remove("active");
+            c.setAttribute("aria-pressed", "false");
+          });
+          card.classList.add("active");
+          card.setAttribute("aria-pressed", "true");
+          const mode = card.getAttribute("data-mode");
+          setAnswerMode(mode === "vision" ? "video" : mode);
+          updateConfigSummary();
         });
       });
 
-      // Personalization Accordion
+      // 8. Personalization Accordion
       const togglePersonalization = document.getElementById("toggle-personalization");
       const personalizationFields = document.getElementById("personalization-fields");
       const accordionArrow = document.getElementById("accordion-arrow");
@@ -3215,25 +3953,38 @@
         togglePersonalization.addEventListener("click", () => {
           const isHidden = personalizationFields.classList.toggle("hidden");
           if (accordionArrow) accordionArrow.textContent = isHidden ? "▼" : "▲";
+          togglePersonalization.setAttribute("aria-expanded", isHidden ? "false" : "true");
         });
       }
 
-      // Resume & JD Char Counters
+      // 9. Target Role live update
+      const roleInput = document.getElementById("session-target-role");
+      if (roleInput) {
+        roleInput.addEventListener("input", () => {
+          updateConfigSummary();
+        });
+      }
+
+      // 10. Live Character Counters (Resume max 15,000, JD max 10,000)
       const resumeInput = document.getElementById("session-resume-text");
       const jdInput = document.getElementById("session-job-description");
       const resumeCount = document.getElementById("resume-char-count");
       const jdCount = document.getElementById("jd-char-count");
       if (resumeInput && resumeCount) {
         resumeInput.addEventListener("input", () => {
-          resumeCount.textContent = `${resumeInput.value.length.toLocaleString()} / 8,000`;
+          resumeCount.textContent = `${resumeInput.value.length.toLocaleString()} / 15,000`;
         });
       }
       if (jdInput && jdCount) {
         jdInput.addEventListener("input", () => {
-          jdCount.textContent = `${jdInput.value.length.toLocaleString()} / 8,000`;
+          jdCount.textContent = `${jdInput.value.length.toLocaleString()} / 10,000`;
         });
       }
+
+      // Initial call to sync summary
+      updateConfigSummary();
     }
+
     async function fetchApi(path, options = {}) {
       options.credentials = options.credentials || "include";
       const response = await fetch(`${API_URL}${path}`, options);
@@ -3292,68 +4043,176 @@
     // ==========================================
 
     async function startSession() {
-      startSessionButton.disabled = true;
-      setStatus("Initializing interview session...");
-      sessionSummaryCard.classList.add("hidden");
-      sessionEvalCard.classList.add("hidden");
+      const startBtn = document.getElementById("start-session-button");
+      const btnText = document.getElementById("start-btn-text");
+      const btnArrow = document.getElementById("start-btn-arrow");
+      const errorNotice = document.getElementById("setup-error-notice");
+
+      if (window._isStartingSession) return;
+      window._isStartingSession = true;
+
+      if (errorNotice) {
+        errorNotice.classList.add("hidden");
+        errorNotice.textContent = "";
+      }
+
+      if (startBtn) startBtn.disabled = true;
+      if (btnText) btnText.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span> Starting interview...';
+      if (btnArrow) btnArrow.style.display = "none";
 
       try {
-        const targetRoleInput = document.getElementById("session-target-role");
-        const expLevelSelect = document.getElementById("session-experience-level");
-        const roleVal = targetRoleInput ? targetRoleInput.value.trim() : "";
-        const expVal = expLevelSelect ? expLevelSelect.value : "mid";
+        // 1. Gather & Validate Interview Mode & Turns
+        const activeModeChip = document.querySelector("#mode-chips .mode-large-chip.active");
+        const isSingleQuestion = activeModeChip && activeModeChip.getAttribute("data-mode") === "single";
 
-        let selectedCats = null;
-        if (catAllCheckbox && !catAllCheckbox.checked) {
-          const checked = Array.from(catCheckboxes).filter((c) => c.checked).map((c) => c.value);
-          if (checked.length > 0) {
-            selectedCats = checked;
+        let turns = 5;
+        if (isSingleQuestion) {
+          turns = 1;
+        } else {
+          const turnsSelect = document.getElementById("session-turns");
+          const customTurnsInput = document.getElementById("custom-turns-input");
+          if (customTurnsInput && customTurnsInput.value) {
+            turns = parseInt(customTurnsInput.value, 10);
+          } else if (turnsSelect) {
+            turns = parseInt(turnsSelect.value, 10);
+          }
+          if (isNaN(turns) || turns < 1 || turns > 20) {
+            throw new Error("Turn budget must be a valid number between 1 and 20.");
           }
         }
 
-        const selectedStyle = (sessionInterviewerStyleSelect && sessionInterviewerStyleSelect.value)
-          ? sessionInterviewerStyleSelect.value
-          : "professional";
+        // 2. Gather & Validate Categories (Exact Backend Payload Contract)
+        const catAllChip = document.querySelector('#category-chips [data-cat="all"]');
+        const activeCatChips = Array.from(document.querySelectorAll('#category-chips .choice-chip.active')).filter(c => c.getAttribute("data-cat") !== "all");
+
+        let payloadCategory = null;
+        let payloadCategories = null;
+
+        if (catAllChip && catAllChip.classList.contains("active")) {
+          // All Categories: category="All", categories=["Python", "Databases", "System Design", "Behavioral"]
+          payloadCategory = "All";
+          payloadCategories = ["Python", "Databases", "System Design", "Behavioral"];
+        } else if (activeCatChips.length === 1) {
+          // Single category: category="Python", categories=["Python"]
+          const singleName = getCanonicalCategory(activeCatChips[0].getAttribute("data-cat"));
+          if (!singleName) {
+            throw new Error("Please select a valid canonical category.");
+          }
+          payloadCategory = singleName;
+          payloadCategories = [singleName];
+        } else if (activeCatChips.length > 1) {
+          // Multi-category: category=null, categories=["Python", "Databases"]
+          const validSelected = activeCatChips.map(c => getCanonicalCategory(c.getAttribute("data-cat"))).filter(Boolean);
+          if (validSelected.length === 0) {
+            throw new Error("Please select at least one valid category.");
+          }
+          if (validSelected.length === 4) {
+            payloadCategory = "All";
+            payloadCategories = ["Python", "Databases", "System Design", "Behavioral"];
+          } else {
+            payloadCategory = null;
+            payloadCategories = validSelected;
+          }
+        } else {
+          // Fallback to All Categories
+          payloadCategory = "All";
+          payloadCategories = ["Python", "Databases", "System Design", "Behavioral"];
+        }
+
+        // 3. Difficulty (Adaptive Preset Mapping: NEVER send "adaptive")
+        const diffSelect = document.getElementById("session-difficulty");
+        let rawDiff = diffSelect ? (diffSelect.value || null) : null;
+        let payloadDifficulty = null;
+        if (rawDiff === "easy") {
+          payloadDifficulty = "beginner";
+        } else if (rawDiff === "medium") {
+          payloadDifficulty = "medium";
+        } else if (rawDiff === "hard") {
+          payloadDifficulty = "hard";
+        } else {
+          // Adaptive preset: null (backend Phase 7 dynamic adaptation)
+          payloadDifficulty = null;
+        }
+
+        // 4. Experience Level
+        const expSelect = document.getElementById("session-experience-level");
+        let expVal = expSelect ? expSelect.value.trim().toLowerCase() : "mid";
+        if (!["junior", "mid", "senior"].includes(expVal)) {
+          expVal = "mid";
+        }
+
+        // 5. Interviewer Style
+        const styleSelect = document.getElementById("session-interviewer-style");
+        let styleVal = styleSelect ? styleSelect.value.trim().toLowerCase() : "professional";
+        if (!["professional", "conversational", "strict"].includes(styleVal)) {
+          styleVal = "professional";
+        }
+
+        // 6. Personalization Fields (Target Role, Resume, Job Description)
+        const targetRoleInput = document.getElementById("session-target-role");
+        const roleVal = targetRoleInput ? targetRoleInput.value.trim() : "";
+        if (roleVal.length > 100) {
+          throw new Error("Target role cannot exceed 100 characters.");
+        }
 
         const resumeInput = document.getElementById("session-resume-text");
         const jdInput = document.getElementById("session-job-description");
         const resumeVal = resumeInput ? resumeInput.value.trim() : "";
         const jdVal = jdInput ? jdInput.value.trim() : "";
 
+        if (resumeVal.length > 15000) {
+          throw new Error("Resume cannot exceed 15,000 characters.");
+        }
+        if (jdVal.length > 10000) {
+          throw new Error("Job description cannot exceed 10,000 characters.");
+        }
+
+        // 7. Construct Backend Payload
         const payload = {
-          categories: selectedCats,
-          difficulty: sessionDifficultySelect.value || null,
-          max_turns: parseInt(sessionTurnsSelect.value, 10) || 5,
+          category: payloadCategory,
+          categories: payloadCategories,
+          difficulty: payloadDifficulty,
+          max_turns: turns,
           target_role: roleVal || null,
           experience_level: expVal,
-          interviewer_style: selectedStyle,
+          interviewer_style: styleVal,
           resume_text: resumeVal || null,
           job_description: jdVal || null
         };
 
+        // 8. Execute Session Creation Request
         const session = await fetchApi("/sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
 
+        // 9. Bind Session State
         activeSessionId = session.session_id;
         activeTurnNumber = session.current_turn;
         activeMaxTurns = session.max_turns;
-        activeInterviewerStyle = session.interviewer_style || selectedStyle;
+        activeInterviewerStyle = session.interviewer_style || styleVal;
         activeSessionSelectedCategories = session.selected_categories || null;
         activeSessionCategory = session.category || null;
         activeSessionTargetRole = session.target_role || null;
         activeSessionExperienceLevel = session.experience_level || null;
 
         displaySessionQuestion(session.question, null, null);
-        document.getElementById("session-setup").classList.add("hidden");
-        sessionActiveCard.classList.remove("hidden");
+        const setupEl = document.getElementById("session-setup");
+        if (setupEl) setupEl.classList.add("hidden");
+        if (sessionActiveCard) sessionActiveCard.classList.remove("hidden");
         setStatus("");
       } catch (err) {
-        setStatus(err.message, true);
+        console.error("Failed to start session:", err);
+        if (errorNotice) {
+          errorNotice.textContent = err.message || "Unable to start the interview. Please check your configuration and try again.";
+          errorNotice.classList.remove("hidden");
+        }
       } finally {
-        startSessionButton.disabled = false;
+        window._isStartingSession = false;
+        if (startBtn) startBtn.disabled = false;
+        if (btnText) btnText.textContent = "Start Interview";
+        if (btnArrow) btnArrow.style.display = "inline";
       }
     }
 
@@ -5536,8 +6395,11 @@
     }
 
     function setStatus(message, isError = false) {
-      statusMessage.textContent = message;
-      statusMessage.classList.toggle("error", isError);
+      const statusMessage = document.getElementById("status-message");
+      if (statusMessage) {
+        statusMessage.textContent = message;
+        statusMessage.classList.toggle("error", isError);
+      }
     }
 
     // =======================================================================
